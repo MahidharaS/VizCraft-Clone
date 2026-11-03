@@ -29,6 +29,8 @@ pub struct Project {
     pub model: ModelDef,
     pub report: Report,
     pub flows: Vec<Flow>,
+    /// Notebooks (Python / DAX / M / Markdown cells) shown in the Flows view.
+    pub notebooks: Vec<Notebook>,
     pub publish: PublishSettings,
     /// Next id handed out by [`Project::next_id`].
     pub id_seed: u64,
@@ -44,6 +46,7 @@ impl Default for Project {
             model: ModelDef::default(),
             report: Report::default(),
             flows: vec![],
+            notebooks: vec![],
             publish: PublishSettings::default(),
             id_seed: 1000,
         }
@@ -123,6 +126,8 @@ pub struct DataSheet {
     pub col_widths: Vec<f32>,
     /// Column types forced by the user ("Text", "Number", "Date", "Boolean"); empty = infer.
     pub col_types: Vec<String>,
+    /// Number formats per column (`#,0.00`, `$#,0`, `0%`, `yyyy-mm-dd`); empty = General.
+    pub col_formats: Vec<String>,
     /// Load the sheet to the model as a table.
     pub load: bool,
     /// When the sheet started as a copy of a query's output, its name.
@@ -1632,6 +1637,23 @@ pub struct FlowNode {
     pub y: f32,
     /// Node settings.
     pub config: BTreeMap<String, serde_json::Value>,
+}
+
+/// A notebook: an ordered list of cells (Fabric / Jupyter style).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Notebook {
+    pub name: String,
+    pub cells: Vec<NotebookCell>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NotebookCell {
+    pub id: u64,
+    /// "markdown", "python", "dax" or "m".
+    pub kind: String,
+    pub source: String,
 }
 
 // ---------------------------------------------------------------------------------------------

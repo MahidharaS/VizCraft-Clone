@@ -121,6 +121,7 @@ fn sales_sheet() -> DataSheet {
         name: "Sales".into(),
         cells,
         col_widths: vec![],
+        col_formats: vec![String::new(), "yyyy-mm-dd".into(), String::new(), String::new(), String::new(), "#,0".into(), "$#,0.00".into(), "0%".into()],
         col_types: vec!["Whole Number".into(), "Date".into(), "Text".into(), "Text".into(), "Text".into(), "Whole Number".into(), "Decimal Number".into(), "Decimal Number".into()],
         load: true,
         from_query: None,
