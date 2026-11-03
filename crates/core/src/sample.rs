@@ -121,6 +121,7 @@ fn sales_sheet() -> DataSheet {
         name: "Sales".into(),
         cells,
         col_widths: vec![],
+        col_formats: vec![String::new(), "yyyy-mm-dd".into(), String::new(), String::new(), String::new(), "#,0".into(), "$#,0.00".into(), "0%".into()],
         col_types: vec!["Whole Number".into(), "Date".into(), "Text".into(), "Text".into(), "Text".into(), "Whole Number".into(), "Decimal Number".into(), "Decimal Number".into()],
         load: true,
         from_query: None,
@@ -328,6 +329,9 @@ pub fn sales() -> Project {
     crate::build::sync_model_tables(&mut p);
     p.publish.interactive = true;
     p.publish.include_mobile = true;
+    // A Fabric-style flow: store × product segments with k-means.
+    let seg = crate::flow::example_segments(&mut p);
+    p.flows.push(seg);
     p
 }
 

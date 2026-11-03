@@ -408,7 +408,8 @@ impl VizApp {
     // ---------------------------------------------------------------- frame
 
     fn keys(&mut self, ctx: &egui::Context) {
-        let typing = ctx.egui_wants_keyboard_input();
+        // Only text fields keep Ctrl+Z for themselves (grids and canvases may hold focus).
+        let typing = ctx.text_edit_focused();
         let (undo, redo, save, open, newp, refresh) = ctx.input_mut(|i| {
             (
                 i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Z)),

@@ -274,7 +274,7 @@ impl Host for ProjectHost<'_> {
             return Some(vizcraft_query::evaluate(&p.value, &vizcraft_query::NoHost));
         }
         if let Some(s) = self.project.sheet(name) {
-            return Some(Ok(MValue::table(crate::sheet::evaluate(s).to_m())));
+            return Some(Ok(MValue::table(crate::sheet::evaluate_with(s, &self.project.sheets).to_m())));
         }
         self.inner.resolve(name)
     }
@@ -284,7 +284,7 @@ impl Host for ProjectHost<'_> {
             .project
             .sheets
             .iter()
-            .map(|s| vec![MValue::table(crate::sheet::evaluate(s).to_m()), MValue::text(&s.name)])
+            .map(|s| vec![MValue::table(crate::sheet::evaluate_with(s, &self.project.sheets).to_m()), MValue::text(&s.name)])
             .collect();
         Ok(vizcraft_query::Table::new(vec!["Content".into(), "Name".into()], rows))
     }
@@ -384,7 +384,7 @@ pub fn load_tables(p: &Project, host: &dyn Host) -> (BTreeMap<String, Rc<TableDa
     for t in &p.model.tables {
         let data = match &t.source {
             TableSource::Query(q) => evaluate_query(p, q, host).map(|mt| TableData::from_m(&t.name, &mt)),
-            TableSource::Sheet(s) => p.sheet(s).map(crate::sheet::evaluate).ok_or_else(|| Error::Msg(format!("The data sheet `{s}` is missing."))),
+            TableSource::Sheet(s) => p.sheet(s).map(|sh| crate::sheet::evaluate_with(sh, &p.sheets)).ok_or_else(|| Error::Msg(format!("The data sheet `{s}` is missing."))),
             TableSource::Parameter(n) => parameter_table(p, n),
             TableSource::Flow(spec) => crate::flow::table_for(p, spec, host),
             TableSource::Calculated(_) | TableSource::None => continue,
@@ -669,7 +669,7 @@ pub fn rebuild(p: &Project, prev: &Built, params: &BTreeMap<String, Scalar>) -> 
         if let TableSource::Sheet(s) = &t.source
             && let Some(sh) = p.sheet(s)
         {
-            let mut d = crate::sheet::evaluate(sh);
+            let mut d = crate::sheet::evaluate_with(sh, &p.sheets);
             d.name = t.name.clone();
             d.normalize();
             apply_declared_types(&mut d, t);
