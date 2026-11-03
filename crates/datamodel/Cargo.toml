@@ -1,0 +1,15 @@
+[package]
+name = "vizcraft-datamodel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GridCraft Power Pivot: the native data model engine (columnar tables, relationships, DAX measures)"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }

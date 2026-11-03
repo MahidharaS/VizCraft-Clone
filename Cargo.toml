@@ -1,0 +1,52 @@
+[workspace]
+resolver = "3"
+members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "apps/vizcraft", "apps/vizcraft-server"]
+default-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "apps/vizcraft", "apps/vizcraft-server"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.90"
+repository = "https://github.com/digital-maven/all"
+
+[workspace.dependencies]
+vizcraft-datamodel = { path = "crates/datamodel" }
+vizcraft-query = { path = "crates/query" }
+vizcraft-core = { path = "crates/core" }
+vizcraft-connectors = { path = "crates/connectors" }
+vizcraft-publish = { path = "crates/publish" }
+thiserror = "2"
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+log = "0.4"
+egui = "0.37"
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "persistence", "wayland", "x11"] }
+egui_extras = { version = "0.37", default-features = false, features = ["image"] }
+rfd = "0.17"
+arboard = { version = "3.6", default-features = false }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+zip = { version = "3", default-features = false, features = ["deflate"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+debug = 0
+strip = true
