@@ -54,6 +54,10 @@ pub fn show(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
             });
         });
     });
+    // The Power Query Editor has its own ribbon.
+    if app.pq_open {
+        return;
+    }
     // Tabs + ribbon body.
     let has_sel = !app.selected.is_empty() && app.view == View::Report && !app.pq_open;
     egui::Panel::top("ribbon").frame(egui::Frame::new().fill(t.ribbon).inner_margin(egui::Margin { left: 8, right: 8, top: 2, bottom: 4 }).stroke(egui::Stroke::new(1.0, t.border))).show(ui, |ui| {

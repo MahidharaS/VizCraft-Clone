@@ -12,3 +12,12 @@ workspace = true
 vizcraft-query = { workspace = true }
 vizcraft-core = { workspace = true }
 serde_json = { workspace = true }
+chrono = { workspace = true }
+calamine = "0.38"
+rusqlite = { version = "0.41", features = ["bundled", "column_decltype"] }
+ureq = "3"
+quick-xml = "0.41"
+postgres = "0.19"
+mysql = { version = "28", default-features = false, features = ["default-rust"] }
+parquet = { version = "60", default-features = false, features = ["snap", "flate2-zlib-rs", "lz4", "brotli"] }
+bytes = "1"

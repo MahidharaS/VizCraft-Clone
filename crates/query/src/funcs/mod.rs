@@ -6,6 +6,7 @@ mod date;
 mod list;
 mod number;
 mod other;
+pub mod html;
 pub mod source;
 pub mod table;
 mod text;
@@ -309,7 +310,12 @@ pub const NAMES: &[&str] = &[
     "Logical.ToText",
     "MySQL.Database",
     "Number.Abs",
+    "Number.Acos",
+    "Number.Asin",
+    "Number.Atan",
+    "Number.Cos",
     "Number.Exp",
+    "Number.Factorial",
     "Number.From",
     "Number.FromText",
     "Number.IntegerDivide",
@@ -327,7 +333,9 @@ pub const NAMES: &[&str] = &[
     "Number.RoundTowardZero",
     "Number.RoundUp",
     "Number.Sign",
+    "Number.Sin",
     "Number.Sqrt",
+    "Number.Tan",
     "Number.ToText",
     "OData.Feed",
     "Odbc.DataSource",
@@ -335,6 +343,7 @@ pub const NAMES: &[&str] = &[
     "Parquet.Document",
     "Percentage.From",
     "PostgreSQL.Database",
+    "Python.Execute",
     "Record.AddField",
     "Record.Field",
     "Record.FieldCount",
@@ -483,6 +492,7 @@ pub const NAMES: &[&str] = &[
     "Value.ReplaceType",
     "Value.Type",
     "Web.Contents",
+    "Web.Page",
     "Xml.Document",
     "Xml.Tables",
 ];
