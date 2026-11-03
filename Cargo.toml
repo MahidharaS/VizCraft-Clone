@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "apps/vizcraft", "apps/vizcraft-server"]
+members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/wasm", "apps/vizcraft", "apps/vizcraft-server"]
 default-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "apps/vizcraft", "apps/vizcraft-server"]
 
 [workspace.package]
@@ -28,6 +28,8 @@ rfd = "0.17"
 arboard = { version = "3.6", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 zip = { version = "3", default-features = false, features = ["deflate"] }
+ureq = { version = "2", features = ["json"] }
+tiny_http = "0.12"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
