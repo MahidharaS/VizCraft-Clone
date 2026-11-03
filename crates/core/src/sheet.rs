@@ -253,6 +253,55 @@ pub fn shift_formula(input: &str, dr: i64, dc: i64) -> String {
     out
 }
 
+/// A formula evaluated once per table row, with `[Column]` references (Excel syntax:
+/// `=IF([Qty] > 2, [Price] * 0.9, [Price])`, `[First] & " " & [Last]`). Used by flow nodes.
+#[derive(Clone, Debug)]
+pub struct RowFormula {
+    expr: Expr,
+}
+
+impl RowFormula {
+    /// Compiles `src` (with or without a leading `=`) against the table's column names.
+    pub fn compile(src: &str, columns: &[String]) -> Result<RowFormula, String> {
+        let src = src.trim();
+        let src = src.strip_prefix('=').unwrap_or(src);
+        let mut expr = parse_formula(src)?;
+        resolve_fields(&mut expr, columns)?;
+        Ok(RowFormula { expr })
+    }
+    /// Evaluates the formula on one row.
+    pub fn eval(&self, row: &[Scalar]) -> CellValue {
+        let mut book = Book::new(vec![]);
+        book.row = row
+            .iter()
+            .map(|v| match v {
+                Scalar::Null => V::Empty,
+                Scalar::Num(n) => V::Num(*n),
+                Scalar::Bool(b) => V::Bool(*b),
+                Scalar::Text(t) => V::text(t.as_str()),
+            })
+            .collect();
+        book.eval(0, &self.expr).scalar().to_cell()
+    }
+}
+
+fn resolve_fields(e: &mut Expr, cols: &[String]) -> Result<(), String> {
+    match e {
+        Expr::Field(name, idx) => {
+            *idx = cols.iter().position(|c| c.eq_ignore_ascii_case(name.trim())).ok_or_else(|| format!("There's no column [{name}]."))?;
+            Ok(())
+        }
+        Expr::Neg(x) | Expr::Percent(x) => resolve_fields(x, cols),
+        Expr::Bin(_, a, b) => {
+            resolve_fields(a, cols)?;
+            resolve_fields(b, cols)
+        }
+        Expr::Call(_, args) => args.iter_mut().try_for_each(|a| resolve_fields(a, cols)),
+        Expr::Array(rows) => rows.iter_mut().flatten().try_for_each(|a| resolve_fields(a, cols)),
+        _ => Ok(()),
+    }
+}
+
 /// The function names the engine knows (for autocomplete and help).
 pub const FUNCTIONS: &[&str] = &[
     "ABS", "AND", "AVERAGE", "AVERAGEIF", "CEILING", "CHAR", "CHOOSE", "CONCAT", "CONCATENATE", "COUNT", "COUNTA", "COUNTBLANK", "COUNTIF", "COUNTIFS", "DATE", "DAY", "DAYS", "EDATE", "EOMONTH", "EXACT", "EXP", "FALSE", "FIND", "FLOOR", "HOUR",
@@ -478,6 +527,8 @@ enum Tok {
     RBrace,
     Semi,
     ErrLit(&'static str),
+    /// `[Column name]` (row formulas in flows).
+    Field(String),
 }
 
 #[derive(Clone, Debug)]
@@ -521,6 +572,28 @@ fn lex(src: &str) -> Result<Vec<Spanned>, String> {
             ':' => {
                 out.push(single(Tok::Colon));
                 i += 1;
+            }
+            '[' => {
+                let mut name = String::new();
+                i += 1;
+                loop {
+                    match at(i) {
+                        None => return Err(format!("{NAME} (missing `]`)")),
+                        Some(']') if at(i + 1) == Some(']') => {
+                            name.push(']');
+                            i += 2;
+                        }
+                        Some(']') => {
+                            i += 1;
+                            break;
+                        }
+                        Some(ch) => {
+                            name.push(ch);
+                            i += 1;
+                        }
+                    }
+                }
+                out.push(Spanned { tok: Tok::Field(name), start, end: pos(i) });
             }
             '{' => {
                 out.push(single(Tok::LBrace));
@@ -710,6 +783,8 @@ enum Expr {
     Array(Vec<Vec<Expr>>),
     /// An unknown name (gives #NAME?).
     Name(String),
+    /// A column of the current row (row formulas): name, then resolved index.
+    Field(String, usize),
 }
 
 fn parse_formula(src: &str) -> Result<Expr, String> {
@@ -789,6 +864,7 @@ impl Parser {
             Some(Tok::Num(n)) => Ok(Expr::Num(n)),
             Some(Tok::Str(s)) => Ok(Expr::Str(s)),
             Some(Tok::ErrLit(e)) => Ok(Expr::Err(e)),
+            Some(Tok::Field(f)) => Ok(Expr::Field(f, usize::MAX)),
             Some(Tok::LParen) => {
                 let e = self.expr(0)?;
                 match self.next() {
@@ -882,6 +958,8 @@ struct Book<'a> {
     sheets: Vec<&'a DataSheet>,
     cache: Vec<HashMap<(usize, usize), V>>,
     visiting: Vec<(usize, usize, usize)>,
+    /// The current row of a row formula.
+    row: Vec<V>,
 }
 
 const MAX_DEPTH: usize = 256;
@@ -889,7 +967,7 @@ const MAX_DEPTH: usize = 256;
 impl<'a> Book<'a> {
     fn new(sheets: Vec<&'a DataSheet>) -> Book<'a> {
         let n = sheets.len();
-        Book { sheets, cache: vec![HashMap::new(); n], visiting: Vec::new() }
+        Book { sheets, cache: vec![HashMap::new(); n], visiting: Vec::new(), row: Vec::new() }
     }
 
     fn sheet_index(&self, name: &str) -> Option<usize> {
@@ -962,6 +1040,7 @@ impl<'a> Book<'a> {
                     V::Err(NAME)
                 }
             }
+            Expr::Field(_, i) => self.row.get(*i).cloned().unwrap_or(V::Err(REF)),
             Expr::Ref { sheet, row, col } => {
                 let target = match sheet {
                     Some(s) => match self.sheet_index(s) {
@@ -2135,6 +2214,17 @@ mod tests {
         assert_eq!(shift_formula("=Sheet2!A1*LOG10(2)", 1, 0), "=Sheet2!A2*LOG10(2)");
         assert_eq!(shift_formula("=SUM(A:A)", 0, 1), "=SUM(B:B)");
         assert_eq!(shift_formula("plain", 1, 1), "plain");
+    }
+
+    #[test]
+    fn row_formulas() {
+        let cols = vec!["Qty".to_string(), "Unit Price".to_string(), "Name".to_string()];
+        let f = RowFormula::compile("=IF([Qty]>2, [Qty]*[Unit Price]*0.9, [Qty]*[Unit Price])", &cols).unwrap();
+        assert_eq!(f.eval(&[Scalar::Num(3.0), Scalar::Num(10.0), Scalar::Null]), CellValue::Num(27.0));
+        assert_eq!(f.eval(&[Scalar::Num(1.0), Scalar::Num(10.0), Scalar::Null]), CellValue::Num(10.0));
+        let g = RowFormula::compile("UPPER(LEFT([name],2)) & \"-\" & [Qty]", &cols).unwrap();
+        assert_eq!(g.eval(&[Scalar::Num(3.0), Scalar::Null, Scalar::Text("kiwi".into())]), CellValue::Text("KI-3".into()));
+        assert!(RowFormula::compile("[Nope]+1", &cols).is_err());
     }
 
     #[test]
