@@ -218,7 +218,7 @@ fn along(pts: &[Pos2], frac: f32) -> (Pos2, Vec2) {
 }
 
 fn arrow(p: &egui::Painter, at: Pos2, dir: Vec2, color: Color32, z: f32) {
-    let d = dir.normalized() * 6.0 * z;
+    let d = dir.normalized() * 7.5 * z;
     let n = vec2(-d.y, d.x) * 0.75;
     p.add(Shape::convex_polygon(vec![at + d, at - d + n, at - d - n], color, Stroke::NONE));
 }
@@ -255,6 +255,7 @@ struct CardGeom {
 
 pub fn show(app: &mut VizApp, ui: &mut Ui) {
     let t = app.tokens();
+    super::style_fields(ui, &t);
     let metas = tables_meta(&app.project, &app.built);
     ensure_layout(app, &metas);
     super::table_view::load_buffers_pub(app);
@@ -528,9 +529,9 @@ fn canvas(app: &mut VizApp, ui: &mut Ui, t: &Tokens, metas: &[TableMeta]) {
         };
         for (end, many, dir) in [(pts.first().copied(), many_a, da), (pts.last().copied(), many_b, db)] {
             let Some(e) = end else { continue };
-            let c = e + vec2(dir * 13.0 * z, -9.0 * z);
-            painter.circle_filled(c, 7.0 * z, t.panel);
-            painter.circle_stroke(c, 7.0 * z, Stroke::new(1.0, color));
+            let c = e + vec2(dir * 15.0 * z, -10.0 * z);
+            painter.circle_filled(c, 8.5 * z, t.panel);
+            painter.circle_stroke(c, 8.5 * z, Stroke::new(1.2, color));
             painter.text(c + vec2(0.0, if many { 1.5 * z } else { 0.0 }), Align2::CENTER_CENTER, if many { "*" } else { "1" }, FontId::proportional(if many { 13.0 } else { 10.0 } * z), color);
         }
         // Filter direction: from the one side to the many side (both ways when bidirectional).

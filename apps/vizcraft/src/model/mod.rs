@@ -37,7 +37,6 @@ pub struct ModelUi {
     pub search: String,
     /// Data pane: tables shown collapsed (by name); `expanded_all` flips the default.
     pub collapsed: BTreeSet<String>,
-    pub expanded: BTreeSet<String>,
     pub table: table_view::TableViewState,
     pub diagram: diagram::DiagramState,
     pub dax: dax_view::DaxState,
@@ -665,7 +664,12 @@ pub fn dialogs(app: &mut VizApp, ctx: &egui::Context) {
                 "quick" => quick_measure(app),
                 "column" => new_column(app, None),
                 "table" => new_table(app),
-                "calc" => calculated_field(app),
+                "calc" => {
+                    calculated_field(app);
+                    if let Some(dialogs::Dialog::Calc(f)) = &mut app.model_ui.dialog {
+                        f.set_formula("IF AVG({FIXED [Region] : SUM([Quantity])}) > 300 THEN 'Strong' ELSE 'Weak' END");
+                    }
+                }
                 "relationships" => manage_relationships(app),
                 "edit-relationship" => {
                     if let Some(id) = app.project.model.relationships.first().map(|r| r.id) {
@@ -676,6 +680,9 @@ pub fn dialogs(app: &mut VizApp, ctx: &egui::Context) {
                 "roles" => manage_roles(app),
                 "viewas" => view_as(app),
                 "datetable" => mark_date_table(app),
+                "sel-measure" => app.model_ui.sel = Sel::Measure("Margin %".into()),
+                "sel-column" => app.model_ui.sel = Sel::Column("Sales".into(), "Unit Price".into()),
+                "sel-relationship" => app.model_ui.sel = app.project.model.relationships.first().map(|r| Sel::Relationship(r.id)).unwrap_or_default(),
                 _ => {}
             }
         }
@@ -740,7 +747,6 @@ pub enum Dir {
     Up,
     Down,
     Right,
-    Left,
 }
 
 /// A small filled triangle (chevrons, sort marks, arrows).
@@ -749,7 +755,6 @@ pub fn tri(p: &egui::Painter, c: egui::Pos2, dir: Dir, s: f32, color: Color32) {
         Dir::Down => vec![pos2(c.x - s, c.y - s * 0.55), pos2(c.x + s, c.y - s * 0.55), pos2(c.x, c.y + s * 0.6)],
         Dir::Up => vec![pos2(c.x - s, c.y + s * 0.55), pos2(c.x + s, c.y + s * 0.55), pos2(c.x, c.y - s * 0.6)],
         Dir::Right => vec![pos2(c.x - s * 0.55, c.y - s), pos2(c.x - s * 0.55, c.y + s), pos2(c.x + s * 0.6, c.y)],
-        Dir::Left => vec![pos2(c.x + s * 0.55, c.y - s), pos2(c.x + s * 0.55, c.y + s), pos2(c.x - s * 0.6, c.y)],
     };
     p.add(egui::Shape::convex_polygon(pts, color, egui::Stroke::NONE));
 }
@@ -827,4 +832,11 @@ pub fn strip_group(ui: &mut Ui, t: &Tokens, caption: &str, add: impl FnOnce(&mut
     let x = rr.right() + 3.0;
     ui.painter().line_segment([pos2(x, rr.top() + 2.0), pos2(x, rr.bottom() - 2.0)], egui::Stroke::new(1.0, t.border));
     ui.add_space(6.0);
+}
+
+/// Text fields with a visible border and a slightly tinted fill (the panels are white too).
+pub fn style_fields(ui: &mut Ui, t: &Tokens) {
+    let v = ui.visuals_mut();
+    v.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, t.border);
+    v.extreme_bg_color = if t.dark { Color32::from_rgb(0x16, 0x19, 0x20) } else { Color32::from_rgb(0xFB, 0xFC, 0xFD) };
 }

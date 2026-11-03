@@ -141,6 +141,7 @@ fn run(app: &mut VizApp) {
 
 pub fn show(app: &mut VizApp, ui: &mut Ui) {
     let t = app.tokens();
+    super::style_fields(ui, &t);
     if app.model_ui.dax.tabs.is_empty() {
         app.model_ui.dax = DaxState::default();
     }

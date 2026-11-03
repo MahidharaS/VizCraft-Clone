@@ -5,6 +5,7 @@
 use egui::{Color32, RichText, Sense, Ui, vec2};
 
 use super::editor::{self, Lang};
+use super::dialogs::buttons_row;
 use super::{PaneMode, data_pane, glyph_icon, icon_btn, run_act, strip_group};
 use crate::app::VizApp;
 use crate::theme::Tokens;
@@ -73,6 +74,7 @@ fn ensure(app: &mut VizApp) {
 
 pub fn show(app: &mut VizApp, ui: &mut Ui) {
     let t = app.tokens();
+    super::style_fields(ui, &t);
     ensure(app);
     egui::Panel::top("tmdl_tools").frame(egui::Frame::new().fill(t.ribbon).inner_margin(egui::Margin { left: 10, right: 10, top: 6, bottom: 2 }).stroke(egui::Stroke::new(1.0, t.border))).show(ui, |ui| {
         ui.horizontal(|ui| toolbar(app, ui, &t));
@@ -182,6 +184,7 @@ fn preview_window(app: &mut VizApp, ctx: &egui::Context, t: &Tokens) {
     let mut apply = false;
     let mut cancel = false;
     egui::Window::new("Apply TMDL changes").collapsible(false).resizable(true).default_width(640.0).pivot(egui::Align2::CENTER_TOP).default_pos(egui::pos2(800.0, 120.0)).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         match &p.log {
             Err(e) => {
                 ui.horizontal(|ui| {
@@ -238,7 +241,7 @@ fn preview_window(app: &mut VizApp, ctx: &egui::Context, t: &Tokens) {
             });
         }
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             let can = matches!(&p.log, Ok(l) if !l.is_empty());
             if ui.add_enabled(can, egui::Button::new(RichText::new("Apply changes").color(Color32::WHITE).strong()).fill(t.accent).min_size(vec2(110.0, 26.0))).clicked() {
                 apply = true;
@@ -300,7 +303,7 @@ fn status(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
             }
             None => {}
         }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             ui.label(RichText::new(format!("{} lines", text.lines().count())).size(11.5).color(t.muted));
             if edited {
                 ui.label(RichText::new("Edited · Apply to update the model").size(11.5).color(t.accent));

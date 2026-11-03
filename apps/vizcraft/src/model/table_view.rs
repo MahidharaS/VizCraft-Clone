@@ -149,6 +149,7 @@ fn shown_table(app: &VizApp) -> Option<String> {
 
 pub fn show(app: &mut VizApp, ui: &mut Ui) {
     let t = app.tokens();
+    super::style_fields(ui, &t);
     load_buffers(app);
     egui::Panel::top("tv_tools").frame(egui::Frame::new().fill(t.ribbon).inner_margin(egui::Margin { left: 10, right: 10, top: 6, bottom: 2 }).stroke(egui::Stroke::new(1.0, t.border))).show(ui, |ui| {
         ui.horizontal(|ui| tools(app, ui, &t));
@@ -282,12 +283,12 @@ fn format_buttons(ui: &mut Ui, current: &str) -> Option<String> {
             out = Some(if current.contains(',') { current.replace("#,", "") } else { format!("#,{}", if current.is_empty() { "0" } else { current.trim_start_matches('$') }) });
         }
         let decimals = current.split_once('.').map(|(_, d)| d.chars().filter(|c| *c == '0' || *c == '#').count()).unwrap_or(0);
-        if ui.small_button(".0←").on_hover_text("Fewer decimals").clicked() && decimals > 0 {
+        if ui.small_button("-.0").on_hover_text("Fewer decimals").clicked() && decimals > 0 {
             let (a, b) = current.split_once('.').unwrap_or((current, ""));
             let rest: String = b.chars().skip(1).collect();
             out = Some(if decimals == 1 { format!("{a}{}", rest.trim_start_matches(['0', '#'])) } else { format!("{a}.{rest}") });
         }
-        if ui.small_button("→.00").on_hover_text("More decimals").clicked() {
+        if ui.small_button("+.0").on_hover_text("More decimals").clicked() {
             out = Some(match current.split_once('.') {
                 Some((a, b)) => format!("{a}.0{b}"),
                 None => {

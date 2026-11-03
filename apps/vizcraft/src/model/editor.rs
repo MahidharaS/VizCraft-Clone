@@ -262,6 +262,7 @@ fn code(job: &mut LayoutJob, text: &str, lang: Lang, p: &Pal, measures: &[String
 
 /// What the editor reports back.
 pub struct EditorOut {
+    #[allow(dead_code)]
     pub response: egui::Response,
     pub changed: bool,
     /// Ctrl/Cmd+Enter was pressed while the editor had focus.

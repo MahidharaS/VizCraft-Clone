@@ -59,6 +59,19 @@ fn status_line(ui: &mut Ui, t: &Tokens, ok: bool, text: &str) {
     });
 }
 
+/// A row of buttons aligned right (a bare right-to-left layout would take the whole height).
+pub fn buttons_row(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
+    ui.horizontal(|ui| {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), add);
+    });
+}
+
+/// A vertical divider of a fixed height (a plain separator would stretch the window).
+fn vsep(ui: &mut Ui, t: &Tokens, h: f32) {
+    let (r, _) = ui.allocate_exact_size(vec2(13.0, h), Sense::hover());
+    ui.painter().line_segment([r.center_top(), r.center_bottom()], egui::Stroke::new(1.0, t.border));
+}
+
 fn info_line(ui: &mut Ui, t: &Tokens, text: &str) {
     ui.horizontal_wrapped(|ui| {
         let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
@@ -108,7 +121,7 @@ fn try_measure(app: &VizApp, expr: &str, fmt: &str) -> Result<String, String> {
     let v = app.built.model.evaluate(&e).map_err(|e| e.to_string())?;
     Ok(match v {
         vizcraft_datamodel::Value::Blank => "(Blank)".into(),
-        vizcraft_datamodel::Value::Number(n) if !fmt.is_empty() => vizcraft_core::numfmt::format(n, fmt),
+        vizcraft_datamodel::Value::Number(n) => vizcraft_core::numfmt::format(n, if fmt.is_empty() { "#,0.##" } else { fmt }),
         other => Scalar::from_dm(&other).text(),
     })
 }
@@ -178,7 +191,6 @@ pub struct FormulaForm {
     checked: Option<String>,
     check: Result<String, String>,
     preview: Option<vizcraft_datamodel::QueryResult>,
-    insert: String,
 }
 
 impl FormulaForm {
@@ -205,7 +217,6 @@ impl FormulaForm {
             checked: None,
             check: Err(String::new()),
             preview: None,
-            insert: String::new(),
         }
     }
 }
@@ -275,6 +286,7 @@ fn formula_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut FormulaForm) ->
     let mut commit = false;
     let mut cancel = false;
     window(title, 780.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.horizontal(|ui| {
             ui.label(RichText::new("Name").color(t.muted));
             ui.add(egui::TextEdit::singleline(&mut f.name).desired_width(220.0));
@@ -511,7 +523,15 @@ pub struct QuickForm {
 impl QuickForm {
     pub fn new(app: &VizApp) -> QuickForm {
         let base = app.project.model.measures.first().map(|m| format!("M:{}", m.name)).unwrap_or_default();
-        QuickForm { template: 0, base, agg: "Sum".into(), weight: String::new(), field: String::new(), value: String::new(), n: 5, name: String::new(), named: false, checked: String::new(), check: Err(String::new()) }
+        // A text column of a dimension table makes a good first category.
+        let metas = tables_meta(&app.project, &app.built);
+        let field = metas
+            .iter()
+            .filter(|m| m.kind == super::TableKind::Dimension)
+            .chain(metas.iter())
+            .find_map(|m| m.columns.iter().find(|c| c.ty == ColType::Text && !c.name.to_ascii_lowercase().ends_with("id")).map(|c| format!("{}|{}", m.name, c.name)))
+            .unwrap_or_default();
+        QuickForm { template: 0, base, agg: "Sum".into(), weight: String::new(), field, value: String::new(), n: 5, name: String::new(), named: false, checked: String::new(), check: Err(String::new()) }
     }
 }
 
@@ -675,6 +695,7 @@ fn quick_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut QuickForm) -> boo
     }
     let measures = measure_names(app);
     window("Quick measures", 880.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.horizontal_top(|ui| {
             // Calculations.
             ui.vertical(|ui| {
@@ -696,7 +717,7 @@ fn quick_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut QuickForm) -> boo
                     }
                 });
             });
-            ui.separator();
+            vsep(ui, &t, 400.0);
             // Fields.
             ui.vertical(|ui| {
                 let needs = QUICK.get(f.template).map(|q| q.2).unwrap_or("");
@@ -778,7 +799,7 @@ fn quick_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut QuickForm) -> boo
             });
         });
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             if primary(ui, &t, "Add measure", dax.is_ok() && !f.name.trim().is_empty()) {
                 done = true;
             }
@@ -822,6 +843,10 @@ pub struct CalcForm {
 }
 
 impl CalcForm {
+    pub fn set_formula(&mut self, f: &str) {
+        self.formula = f.to_string();
+    }
+
     pub fn new(table: &str, p: &Project) -> CalcForm {
         let name = free_name("Calculation", |n| p.model.measures.iter().any(|m| m.name.eq_ignore_ascii_case(n)) || p.model.calculated_columns.iter().any(|c| c.name.eq_ignore_ascii_case(n)));
         CalcForm { name, table: table.to_string(), formula: String::new(), checked: String::new(), result: Err(String::new()), check: Err(String::new()), search: String::new() }
@@ -857,6 +882,7 @@ fn calc_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut CalcForm) -> bool 
     let mut done = false;
     let mut cancel = false;
     window("Calculated field (Tableau syntax)", 920.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.horizontal(|ui| {
             ui.label(RichText::new("Name").color(t.muted));
             ui.add(egui::TextEdit::singleline(&mut f.name).desired_width(240.0));
@@ -907,7 +933,7 @@ fn calc_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut CalcForm) -> bool 
                     Err(_) => info_line(ui, &t, "Write a Tableau calculation: fields in [brackets], IF/THEN/ELSE/END, CASE, IIF, ZN, LOD expressions {FIXED …}, table calculations. Parameters: [Parameters].[Name]."),
                 }
             });
-            ui.separator();
+            vsep(ui, &t, 330.0);
             ui.vertical(|ui| {
                 ui.set_width(220.0);
                 ui.label(RichText::new("Fields").strong());
@@ -945,7 +971,7 @@ fn calc_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut CalcForm) -> bool 
             });
         });
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             if primary(ui, &t, "OK", f.result.is_ok() && !f.name.trim().is_empty()) {
                 done = true;
             }
@@ -1103,6 +1129,7 @@ fn relationships_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut RelListFo
     let mut close = false;
     let rels = app.project.model.relationships.clone();
     window("Manage relationships", 860.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.label(RichText::new(format!("{} relationships", rels.len())).color(t.muted));
         ui.add_space(4.0);
         egui::Frame::new().stroke(egui::Stroke::new(1.0, t.border)).corner_radius(4.0).show(ui, |ui| {
@@ -1221,6 +1248,7 @@ fn rel_edit_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut RelForm) -> bo
     let mut cancel = false;
     let title = if f.id.is_some() { "Edit relationship" } else { "New relationship" };
     window(title, 840.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.label(RichText::new("Select tables and columns that are related.").color(t.muted));
         ui.add_space(6.0);
         ui.label(RichText::new("From table").strong());
@@ -1280,7 +1308,7 @@ fn rel_edit_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut RelForm) -> bo
             info_line(ui, &t, "Click a column header in each table to choose the columns to relate.");
         }
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             if primary(ui, &t, "OK", ready) {
                 done = true;
             }
@@ -1396,6 +1424,7 @@ fn parameter_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut ParamForm) ->
     };
     let metas = tables_meta(&app.project, &app.built);
     window(title, 620.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.horizontal(|ui| {
             ui.add_sized([110.0, 20.0], egui::Label::new(RichText::new("Name").color(t.muted)));
             ui.add(egui::TextEdit::singleline(&mut f.name).desired_width(260.0));
@@ -1429,7 +1458,7 @@ fn parameter_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut ParamForm) ->
                             }
                         });
                     });
-                    ui.separator();
+                    vsep(ui, &t, 280.0);
                     ui.vertical(|ui| {
                         ui.label(RichText::new("Fields in the parameter").strong());
                         let mut action = None;
@@ -1559,7 +1588,7 @@ fn parameter_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut ParamForm) ->
             }
         }
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             if primary(ui, &t, "Create", !f.name.trim().is_empty()) {
                 done = true;
             }
@@ -1654,6 +1683,7 @@ fn roles_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut RolesForm) -> boo
     let tables: Vec<String> = app.project.model.tables.iter().map(|t| t.name.clone()).collect();
     let measures = measure_names(app);
     window("Manage security roles", 940.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.horizontal_top(|ui| {
             // Roles.
             ui.vertical(|ui| {
@@ -1688,7 +1718,7 @@ fn roles_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut RolesForm) -> boo
                     ui.label(RichText::new("No roles yet.").color(t.muted));
                 }
             });
-            ui.separator();
+            vsep(ui, &t, 380.0);
             let Some(role) = f.roles.get_mut(f.role) else {
                 ui.label(RichText::new("Create a role, then give it DAX filters on tables: people in the role only see the rows the filters keep.").color(t.muted));
                 return;
@@ -1711,7 +1741,7 @@ fn roles_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut RolesForm) -> boo
                     }
                 }
             });
-            ui.separator();
+            vsep(ui, &t, 380.0);
             // Filter.
             ui.vertical(|ui| {
                 ui.set_width(460.0);
@@ -1765,7 +1795,7 @@ fn roles_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut RolesForm) -> boo
             });
         });
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             if primary(ui, &t, "Save", true) {
                 done = true;
             }
@@ -1814,6 +1844,7 @@ fn view_as_dialog(app: &mut VizApp, ctx: &egui::Context, role: &mut Option<Strin
     let mut cancel = false;
     let roles: Vec<String> = app.project.model.roles.iter().map(|r| r.name.clone()).collect();
     window("View as roles", 380.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.radio_value(role, None, "None (see all the data)");
         for r in &roles {
             ui.radio_value(role, Some(r.clone()), r);
@@ -1825,7 +1856,7 @@ fn view_as_dialog(app: &mut VizApp, ctx: &egui::Context, role: &mut Option<Strin
             }
         }
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             if primary(ui, &t, "OK", true) {
                 done = true;
             }
@@ -1916,6 +1947,7 @@ fn date_table_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut DateTableFor
     let mut unmark = false;
     let mut cancel = false;
     window("Mark as date table", 520.0).open(&mut open).show(ctx, |ui| {
+        super::style_fields(ui, &t);
         ui.label(RichText::new("A date table has one row per day with no gaps. Time intelligence (TOTALYTD, SAMEPERIODLASTYEAR, …) works along it.").color(t.muted));
         ui.add_space(6.0);
         egui::Grid::new("dt_grid").num_columns(2).spacing(vec2(10.0, 8.0)).show(ui, |ui| {
@@ -1941,7 +1973,7 @@ fn date_table_dialog(app: &mut VizApp, ctx: &egui::Context, f: &mut DateTableFor
             status_line(ui, &t, *ok, m);
         }
         ui.add_space(8.0);
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        buttons_row(ui, |ui| {
             let ok = !f.column.is_empty() && f.checks.iter().all(|(ok, _)| *ok);
             if primary(ui, &t, "OK", ok) {
                 done = true;
