@@ -202,6 +202,14 @@ fn edit_shelf(app: &mut VizApp, id: u64, role: &str, f: impl FnOnce(&mut Vec<Fie
 pub fn shelves(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
     let Some(page) = app.current_page().cloned() else { return };
     let Some(id) = page.worksheet_visual.or_else(|| page.elements.iter().find(|e| e.visual().is_some()).map(|e| e.id)) else { return };
+    // A worksheet made from an existing visual: derive its shelves once.
+    if let Some(v) = app.project.element_mut(id).and_then(|e| e.visual_mut())
+        && v.well("ws.columns").is_empty()
+        && v.well("ws.rows").is_empty()
+        && v.wells.iter().any(|(k, f)| !k.starts_with("ws.") && !f.is_empty())
+    {
+        shelves_from_wells(v);
+    }
     egui::Panel::top("ws-shelves").frame(egui::Frame::new().fill(t.panel).inner_margin(egui::Margin::same(6)).stroke(egui::Stroke::new(1.0, t.border))).show(ui, |ui| {
         shelf(app, ui, t, id, "ws.columns", "Columns");
         shelf(app, ui, t, id, "ws.rows", "Rows");

@@ -590,7 +590,7 @@ fn sort(d: &mut VisualData, spec: &VisualSpec, _p: &Project) {
         None => {
             // Default: bar/column/pie/treemap/funnel by first value descending when the axis is text.
             use VisualKind::*;
-            let text_axis = d.first("axis").or_else(|| d.first("legend")).and_then(|i| d.cols.get(i)).is_some_and(|c| !c.col_type.is_numeric() && !c.col_type.is_temporal() && !c.field.label().ends_with(".Month"));
+            let text_axis = d.first("axis").or_else(|| d.first("legend")).and_then(|i| d.cols.get(i)).is_some_and(|c| !c.col_type.is_numeric() && !c.col_type.is_temporal() && !matches!(c.field, FieldRef::Level { .. }));
             let has_legend = matches!(spec.kind, StackedBar | StackedColumn | StackedBar100 | StackedColumn100) && !spec.well("legend").is_empty();
             let auto = matches!(spec.kind, StackedBar | ClusteredBar | StackedColumn | ClusteredColumn | Pie | Donut | Treemap | Funnel | PackedBubbles | WordCloud | Bullet) && text_axis && !has_legend;
             let is_month = d.first("axis").and_then(|i| d.cols.get(i)).is_some_and(|c| matches!(&c.field, FieldRef::Level { level, .. } if level == "Month" || level == "Quarter"));

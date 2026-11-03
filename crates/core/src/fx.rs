@@ -361,34 +361,36 @@ pub fn resolve_point_colors(env: &FxEnv, el: &Element, data: &crate::vquery::Vis
     }
     let Some(Prop::Fx(fx)) = el.props.get("dataColors.fx") else { return };
     let roles: &[&str] = &["axis", "legend", "details", "rows", "location"];
-    // Precompute the value range for gradients with automatic min/max.
-    let mut range: Option<(f64, f64)> = None;
-    if let Fx::Gradient { min: None, .. } | Fx::Gradient { max: None, .. } | Fx::Rules { .. } = fx {
-        let vals: Vec<f64> = data.values().first().map(|vi| data.rows.iter().filter_map(|r| r.get(*vi)?.as_f64()).collect()).unwrap_or_default();
-        if !vals.is_empty() {
-            let lo = vals.iter().cloned().fold(f64::INFINITY, f64::min);
-            let hi = vals.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-            range = Some((lo, hi));
-        }
-    }
+    // Evaluate the bound expression per data point first, then map values to colours (automatic
+    // gradient/percent ranges come from those values, not the visual's own measure).
+    let mut evaluated: Vec<(String, Scalar)> = Vec::new();
     for r in 0..data.rows.len().min(2000) {
         let point = data.identity(r, roles);
         let key = point_key(&point);
-        if props.point_colors.contains_key(&key) {
+        if props.point_colors.contains_key(&key) || evaluated.iter().any(|(k, _)| *k == key) {
             continue;
         }
-        let penv = FxEnv { project: env.project, built: env.built, cx: env.cx, point: point.clone(), page_name: env.page_name };
+        let penv = FxEnv { project: env.project, built: env.built, cx: env.cx, point, page_name: env.page_name };
+        let v = match fx {
+            Fx::Gradient { dax, .. } | Fx::Rules { dax, .. } | Fx::Expression { dax } | Fx::FieldValue { dax } => penv.eval(dax).unwrap_or(Scalar::Null),
+            Fx::Template { text } => Scalar::Text(penv.template(text)),
+        };
+        evaluated.push((key, v));
+    }
+    let nums: Vec<f64> = evaluated.iter().filter_map(|(_, v)| v.as_f64()).collect();
+    let range = if nums.is_empty() {
+        None
+    } else {
+        Some((nums.iter().cloned().fold(f64::INFINITY, f64::min), nums.iter().cloned().fold(f64::NEG_INFINITY, f64::max)))
+    };
+    for (key, v) in evaluated {
         let color = match fx {
-            Fx::Gradient { dax, min, max, min_color, mid_color, max_color } => {
-                let v = penv.eval(dax).ok().and_then(|v| v.as_f64());
+            Fx::Gradient { min, max, min_color, mid_color, max_color, .. } => {
                 let (lo, hi) = (min.or(range.map(|r| r.0)).unwrap_or(0.0), max.or(range.map(|r| r.1)).unwrap_or(1.0));
-                v.map(|x| gradient(x, lo, hi, *min_color, *mid_color, *max_color))
+                v.as_f64().map(|x| gradient(x, lo, hi, *min_color, *mid_color, *max_color))
             }
-            Fx::Rules { dax, rules, default } => {
-                let v = penv.eval(dax).unwrap_or(Scalar::Null);
-                rules.iter().find(|ru| rule_holds(ru, &v, range)).map(|ru| ru.output.clone()).unwrap_or((**default).clone()).as_color()
-            }
-            other => penv.resolve_fx(other).as_color(),
+            Fx::Rules { rules, default, .. } => rules.iter().find(|ru| rule_holds(ru, &v, range)).map(|ru| ru.output.clone()).unwrap_or((**default).clone()).as_color(),
+            _ => Color::parse(&v.text()),
         };
         if let Some(c) = color {
             props.point_colors.insert(key, c);

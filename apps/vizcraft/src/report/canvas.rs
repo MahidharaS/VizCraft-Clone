@@ -245,7 +245,7 @@ pub fn handles(r: Rect) -> [(u8, Pos2); 8] {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn paint_element(app: &mut VizApp, ui: &Ui, p: &egui::Painter, page: &Page, el: &Element, xf: PageXf, t: &Tokens, pointer: Option<Pos2>, hover: &mut Option<(u64, vizcraft_core::scene::Hit)>) {
+pub(crate) fn paint_element(app: &mut VizApp, ui: &Ui, p: &egui::Painter, page: &Page, el: &Element, xf: PageXf, t: &Tokens, pointer: Option<Pos2>, hover: &mut Option<(u64, vizcraft_core::scene::Hit)>) {
     let r = xf.el_rect(el);
     if !p.clip_rect().intersects(r.expand(30.0)) {
         return;

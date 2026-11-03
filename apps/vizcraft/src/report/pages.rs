@@ -359,8 +359,8 @@ pub fn mobile(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
                 crate::paint::paint_scene(&p, &rd.chrome, crate::paint::Xf { origin: r.min, scale: zoom });
                 crate::paint::paint_scene(&p.with_clip_rect(r.intersect(clip)), &rd.content, crate::paint::Xf { origin: r.min + vec2(rd.content_rect.x, rd.content_rect.y) * zoom, scale: zoom });
             } else {
-                p.rect(r, 6.0, t.panel, Stroke::new(1.0, t.border), StrokeKind::Inside);
-                p.text(r.center(), egui::Align2::CENTER_CENTER, e2.kind_label(), egui::FontId::proportional(11.0), t.muted);
+                let mut hover = None;
+                super::canvas::paint_element(app, ui, &p, &page, &e2, xf, t, None, &mut hover);
             }
             // Move by dragging vertically; resize from the bottom edge.
             let id = ui.scope_id().with(("mitem", m.element));

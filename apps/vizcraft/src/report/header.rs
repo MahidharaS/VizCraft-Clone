@@ -34,7 +34,7 @@ pub fn paint(app: &mut VizApp, ui: &Ui, p: &Painter, el: &Element, r: Rect, t: &
     icons.push(Icon { id: "more", glyph: "⋯", tip: "More options" });
     let size = 20.0;
     let total = icons.len() as f32 * size;
-    let start = pos2(r.right() - total - 6.0, r.top() - size - 2.0).max(pos2(r.left(), r.top() - size - 2.0));
+    let start = pos2((r.right() - total - 6.0).max(r.left() + 2.0), r.top() + 3.0);
     let bar = Rect::from_min_size(start - vec2(2.0, 0.0), vec2(total + 4.0, size));
     p.rect(bar, 4.0, t.panel, Stroke::new(1.0, t.border), StrokeKind::Inside);
     for (i, ic) in icons.iter().enumerate() {

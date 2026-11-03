@@ -115,6 +115,11 @@ pub struct VizApp {
     pub ribbon: crate::ribbon::RibbonUi,
     pub last_refresh_ms: f64,
     pub screenshot: Option<(String, u32)>,
+    /// Frame at which `--screenshot` captures.
+    pub screenshot_frame: u32,
+    /// Synthetic input for automated UI checks (`VIZCRAFT_EVENTS="20:click:500,400;40:key:Delete"`).
+    pub synthetic: Vec<(u32, String)>,
+    pub frame: u32,
 }
 
 impl VizApp {
@@ -152,6 +157,16 @@ impl VizApp {
             ribbon: Default::default(),
             last_refresh_ms: 0.0,
             screenshot: None,
+            screenshot_frame: 15,
+            synthetic: std::env::var("VIZCRAFT_EVENTS")
+                .unwrap_or_default()
+                .split(';')
+                .filter_map(|e| {
+                    let (f, rest) = e.split_once(':')?;
+                    Some((f.trim().parse().ok()?, rest.to_string()))
+                })
+                .collect(),
+            frame: 0,
         };
         let mut i = 0;
         while i < args.len() {
@@ -177,6 +192,10 @@ impl VizApp {
                 Some("--screenshot") => {
                     i += 1;
                     app.screenshot = args.get(i).map(|p| (p.clone(), 0));
+                }
+                Some("--screenshot-frame") => {
+                    i += 1;
+                    app.screenshot_frame = args.get(i).and_then(|s| s.parse().ok()).unwrap_or(15);
                 }
                 Some("--dark") => {
                     app.dark = true;
@@ -557,6 +576,47 @@ impl eframe::App for VizApp {
         self.handle_screenshot(&ctx);
     }
 
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw: &mut egui::RawInput) {
+        self.frame += 1;
+        let now: Vec<String> = self.synthetic.iter().filter(|(f, _)| *f == self.frame).map(|(_, e)| e.clone()).collect();
+        for e in now {
+            let mut parts = e.splitn(2, ':');
+            let kind = parts.next().unwrap_or("");
+            let arg = parts.next().unwrap_or("");
+            let pos = || {
+                let (x, y) = arg.split_once(',')?;
+                Some(egui::pos2(x.trim().parse().ok()?, y.trim().parse().ok()?))
+            };
+            match kind {
+                "move" => {
+                    if let Some(p) = pos() {
+                        raw.events.push(egui::Event::PointerMoved(p));
+                    }
+                }
+                "click" | "rclick" | "down" | "up" => {
+                    if let Some(p) = pos() {
+                        let button = if kind == "rclick" { egui::PointerButton::Secondary } else { egui::PointerButton::Primary };
+                        raw.events.push(egui::Event::PointerMoved(p));
+                        if kind != "up" {
+                            raw.events.push(egui::Event::PointerButton { pos: p, button, pressed: true, modifiers: egui::Modifiers::NONE });
+                        }
+                        if kind != "down" {
+                            raw.events.push(egui::Event::PointerButton { pos: p, button, pressed: false, modifiers: egui::Modifiers::NONE });
+                        }
+                    }
+                }
+                "key" => {
+                    let key = egui::Key::from_name(arg);
+                    if let Some(k) = key {
+                        raw.events.push(egui::Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE });
+                    }
+                }
+                "text" => raw.events.push(egui::Event::Text(arg.to_string())),
+                _ => {}
+            }
+        }
+    }
+
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         storage.set_string("dark", self.dark.to_string());
     }
@@ -566,7 +626,7 @@ impl VizApp {
     /// `--screenshot path`: saves a PNG of the window after a few frames, then quits.
     fn handle_screenshot(&mut self, ctx: &egui::Context) {
         let Some((path, frames)) = self.screenshot.clone() else { return };
-        if frames == 15 {
+        if frames == self.screenshot_frame {
             let p2 = path.clone();
             let ctx2 = ctx.clone();
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::ScreenshotCallback::new(move |img| {
