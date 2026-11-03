@@ -134,6 +134,29 @@ impl TableData {
             }
         }
     }
+    /// Converts values to their columns' declared types (text dates in a Date column, …).
+    pub fn normalize(&mut self) {
+        for (c, ty) in self.types.clone().iter().enumerate() {
+            if matches!(ty, ColType::Any) {
+                continue;
+            }
+            for r in self.rows.iter_mut() {
+                if let Some(v) = r.get_mut(c) {
+                    let ok = match (ty, &*v) {
+                        (_, Scalar::Null) => true,
+                        (ColType::Text, Scalar::Text(_)) => true,
+                        (ColType::Number | ColType::Integer | ColType::Date | ColType::DateTime | ColType::Time, Scalar::Num(_)) => true,
+                        (ColType::Bool, Scalar::Bool(_)) => true,
+                        _ => false,
+                    };
+                    if !ok {
+                        *v = convert(v, *ty);
+                    }
+                }
+            }
+        }
+    }
+
     /// From a Power Query table.
     pub fn from_m(name: &str, t: &vizcraft_query::Table) -> TableData {
         let types: Vec<ColType> = (0..t.columns.len())
@@ -368,6 +391,7 @@ pub fn load_tables(p: &Project, host: &dyn Host) -> (BTreeMap<String, Rc<TableDa
         match data {
             Ok(mut d) => {
                 d.name = t.name.clone();
+                d.normalize();
                 apply_declared_types(&mut d, t);
                 out.insert(t.name.clone(), Rc::new(d));
             }
@@ -646,6 +670,7 @@ pub fn rebuild(p: &Project, prev: &Built, params: &BTreeMap<String, Scalar>) -> 
         {
             let mut d = crate::sheet::evaluate(sh);
             d.name = t.name.clone();
+            d.normalize();
             apply_declared_types(&mut d, t);
             tables.insert(t.name.clone(), Rc::new(d));
         }

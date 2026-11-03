@@ -37,19 +37,16 @@ pub fn text_w(ui: &Ui, s: &str) -> f32 {
 
 /// A ribbon group: contents with a caption underneath and a separator on the right.
 pub fn group(ui: &mut Ui, t: &Tokens, caption: &str, add: impl FnOnce(&mut Ui)) {
-    ui.vertical(|ui| {
-        ui.set_min_height(80.0);
-        ui.horizontal(|ui| {
-            ui.set_min_height(64.0);
-            add(ui);
-        });
-        ui.vertical_centered(|ui| {
-            ui.label(egui::RichText::new(caption).size(10.0).color(t.muted));
-        });
+    let top = ui.cursor().min;
+    let inner = ui.allocate_ui_with_layout(egui::vec2(ui.available_width(), 66.0), egui::Layout::left_to_right(egui::Align::Min), |ui| {
+        ui.set_min_height(64.0);
+        add(ui);
     });
-    let r = ui.available_rect_before_wrap();
-    ui.painter().line_segment([egui::pos2(r.left() + 2.0, r.top() + 4.0), egui::pos2(r.left() + 2.0, r.top() + 78.0)], Stroke::new(1.0, t.border));
-    ui.add_space(8.0);
+    let w = inner.response.rect.width().max(text_w(ui, caption) + 8.0);
+    ui.painter().text(egui::pos2(top.x + w / 2.0, top.y + 70.0), egui::Align2::CENTER_TOP, caption, egui::FontId::proportional(10.0), t.muted);
+    let x = top.x + w + 6.0;
+    ui.painter().line_segment([egui::pos2(x, top.y + 4.0), egui::pos2(x, top.y + 80.0)], Stroke::new(1.0, t.border));
+    ui.add_space((w - inner.response.rect.width()).max(0.0) + 12.0);
 }
 
 /// Stacks small buttons in a column of up to three.

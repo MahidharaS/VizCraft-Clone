@@ -352,6 +352,8 @@ mod tests {
                 assert!(!d.rows.is_empty(), "{} has no rows", el.name);
             }
         }
+        let yr = b.model.evaluate("CALCULATE([Total Sales], 'Sales'[Date.Year] = 2024)").unwrap();
+        assert!(yr.as_number().unwrap() > 1000.0, "date levels: {yr:?}");
         let v = b.model.evaluate("[Total Sales]").unwrap();
         assert!(v.as_number().unwrap() > 100000.0);
     }

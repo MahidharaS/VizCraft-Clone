@@ -74,7 +74,7 @@ pub struct Panes {
 
 impl Default for Panes {
     fn default() -> Self {
-        Panes { filters: true, visualizations: true, data: true, bookmarks: false, selection: false, sync_slicers: false, performance: false, format_shape: true }
+        Panes { filters: false, visualizations: true, data: true, bookmarks: false, selection: false, sync_slicers: false, performance: false, format_shape: true }
     }
 }
 
@@ -471,7 +471,9 @@ impl VizApp {
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if self.view == View::Report {
-                        ui.add(egui::Slider::new(&mut self.report.zoom, 0.25..=3.0).show_value(false)).on_hover_text("Zoom");
+                        if ui.add(egui::Slider::new(&mut self.report.zoom, 0.25..=3.0).show_value(false)).on_hover_text("Zoom").changed() {
+                            self.report.fit = false;
+                        }
                         ui.label(egui::RichText::new(format!("{:.0}%", self.report.zoom * 100.0)).size(11.0));
                         if ui.small_button("Fit").clicked() {
                             self.report.fit = true;
