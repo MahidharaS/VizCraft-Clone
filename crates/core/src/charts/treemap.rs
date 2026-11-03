@@ -142,9 +142,10 @@ pub fn render(_spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
             Some(cc) if rect.w > 24.0 && rect.h > 30.0 => {
                 let head = if rect.h > 46.0 && rect.w > 40.0 { size * 1.9 } else { 0.0 };
                 let ptitle = parent.map(|p| cat_text(d, first, p)).unwrap_or_default();
-                s.push(Shape::Rect { rect: Rect::new(rect.x + 0.5, rect.y + 0.5, rect.w - 1.0, rect.h - 1.0), fill: Some(base.shade(0.82)), stroke: Some(Line::solid(1.5, gapc)), radius: 3.0 });
+                s.push(Shape::Rect { rect: Rect::new(rect.x + 0.5, rect.y + 0.5, rect.w - 1.0, rect.h - 1.0), fill: Some(o.theme.visual_background.lerp(base, 0.18)), stroke: Some(Line::solid(1.5, gapc)), radius: 3.0 });
                 if head > 0.0 {
-                    s.text_bold(rect.x + 6.0, rect.y + head / 2.0 + 1.0, ell(&ptitle, size + 1.0, rect.w - 12.0), size + 1.0, base.shade(-0.45), Align::Start, Align::Center);
+                    let tc = if o.theme.visual_background.luminance() < 0.4 { base.shade(0.35) } else { base.shade(-0.45) };
+                    s.text_bold(rect.x + 6.0, rect.y + head / 2.0 + 1.0, ell(&ptitle, size + 1.0, rect.w - 12.0), size + 1.0, tc, Align::Start, Align::Center);
                 }
                 let inner = Rect::new(rect.x + 2.0, rect.y + head + 1.0, (rect.w - 4.0).max(0.0), (rect.h - head - 3.0).max(0.0));
                 let cvals: Vec<f64> = rs.iter().map(|r| d.num(*r, vi).unwrap_or(0.0)).collect();

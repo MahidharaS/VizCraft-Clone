@@ -211,7 +211,7 @@ pub fn funnel(_spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
             s.push_hit(Shape::Rect { rect, fill: Some(color), stroke: None, radius: 2.0 }, h, dimmed);
         }
         let pct = if first != 0.0 { format!("{:.0}%", v / first * 100.0) } else { String::new() };
-        let vt = format!("{}", fmt.short(v));
+        let vt = fmt.short(v);
         let tw = text_width(&vt, size);
         let lc = o.props.color_opt("labels.color");
         if tw + 8.0 < w {

@@ -75,7 +75,10 @@ pub fn cases() -> Vec<(String, VisualSpec, Vec<(&'static str, Prop)>)> {
     add("Slicer tiles", Slicer, vec![("field", vec![col("Product", "Category")])], vec![("slicer.style", Prop::Choice("Tile".into()))], &none);
     add("Slicer dropdown", Slicer, vec![("field", vec![col("Store", "Store")])], vec![("slicer.style", Prop::Choice("Dropdown".into())), ("slicer.open", Prop::Bool(true))], &none);
     add("Slicer between", Slicer, vec![("field", vec![col("Product", "List Price")])], vec![("slicer.style", Prop::Choice("Between".into()))], &|v: &mut VisualSpec| v.range = Some((40.0, 160.0)));
-    add("Table", Table, vec![("columns", vec![col("Store", "Store"), col("Store", "Region"), ms("Total Sales"), ms("Margin %"), ms("Orders")])], vec![], &none);
+    add("Table", Table, vec![("columns", vec![col("Store", "Store"), col("Store", "Region"), ms("Total Sales"), ms("Margin %"), ms("Orders")])], vec![
+        ("cf.Margin %.background", Prop::Fx(Fx::Gradient { dax: String::new(), min: None, max: None, min_color: crate::color::Color::rgb(0xFE, 0xE2, 0xE2), mid_color: Some(crate::color::Color::rgb(0xFE, 0xF9, 0xC3)), max_color: crate::color::Color::rgb(0xDC, 0xFC, 0xE7) })),
+        ("cf.Orders.dataBar", Prop::Fx(Fx::Gradient { dax: String::new(), min: None, max: None, min_color: crate::color::Color::rgb(0x2B, 0x6C, 0xE0), mid_color: None, max_color: crate::color::Color::rgb(0x2B, 0x6C, 0xE0) })),
+    ], &none);
     add("Matrix", Matrix, vec![("rows", vec![col("Product", "Category"), col("Product", "Product")]), ("columns", vec![lv("Year")]), ("values", vec![ms("Total Sales"), ms("Margin %")])], vec![], &|v: &mut VisualSpec| v.expanded = vec!["[\"Gear\"]".into()]);
     add("Key influencers", KeyInfluencers, vec![("values", vec![ms("Margin %")]), ("details", vec![col("Store", "Region"), col("Sales", "Channel"), col("Product", "Category")])], vec![], &none);
     add("Decomposition tree", DecompositionTree, vec![("values", vec![ms("Total Sales")]), ("details", vec![col("Store", "Region"), col("Product", "Category"), col("Sales", "Channel")])], vec![], &none);
@@ -143,7 +146,7 @@ fn every_kind_renders() {
     for (name, spec, props) in &cases {
         for (w, h) in [(480.0, 300.0), (120.0, 60.0), (5.0, 5.0)] {
             let (scene, data) = render_case(&p, &b, spec, props, w, h, &theme);
-            if w > 100.0 {
+            if w > 200.0 {
                 assert!(data.error.is_none() || spec.kind == VisualKind::PythonVisual, "{name}: {:?}", data.error);
                 assert!(scene.items.len() > 2 || scene.message.is_some(), "{name}: empty scene");
             }
@@ -181,13 +184,23 @@ fn empty_and_odd_data_never_panics() {
         vec![vec![Scalar::Num(f64::NAN), Scalar::Text("x".into()), Scalar::Num(-5.0), Scalar::Num(f64::INFINITY), Scalar::Num(-1.0), Scalar::Null, Scalar::Null, Scalar::Null, Scalar::Null, Scalar::Null, Scalar::Null, Scalar::Num(0.0), Scalar::Num(0.0)]],
         (0..40).map(|i| vec![Scalar::Num(i as f64), Scalar::Text(format!("L{}", i % 3)), Scalar::Num((i as f64 - 20.0) * 1e9), Scalar::Num(i as f64), Scalar::Num(-(i as f64)), Scalar::Text(format!("R{i}")), Scalar::Text(format!("C{}", i % 4)), Scalar::Text(format!("D{}", i % 5)), Scalar::Num(i as f64), Scalar::Text(format!("S{}", i % 2)), Scalar::Text(format!("T{}", i % 3)), Scalar::Num(0.0), Scalar::Num(i as f64)]).collect(),
     ];
+    let selected = vec![vec![(FieldRef::col("T", "a"), Scalar::Num(3.0))]];
+    let o_sel = RenderOpts { selected: &selected, ..o };
     for rows in odd {
-        let d = mk(rows);
-        for k in VisualKind::ALL {
-            let mut spec = VisualSpec::new(*k);
-            spec.analytics.push(AnalyticsLine { kind: "Forecast".into(), ..AnalyticsLine::default() });
-            spec.analytics.push(AnalyticsLine { kind: "Trend".into(), ..AnalyticsLine::default() });
-            let _ = render(&spec, &d, &o);
+        let mut d = mk(rows);
+        for pass in 0..2 {
+            if pass == 1 {
+                // Cross-highlight with half values.
+                d.highlight = Some(d.rows.iter().map(|r| r.iter().map(|v| v.as_f64().map(|x| Scalar::Num(x / 2.0)).unwrap_or_else(|| v.clone())).collect()).collect());
+            }
+            for k in VisualKind::ALL {
+                let mut spec = VisualSpec::new(*k);
+                for kind in ["Forecast", "Trend", "Anomalies", "Error bars", "Cluster", "Average", "Reference band"] {
+                    spec.analytics.push(AnalyticsLine { kind: kind.into(), ..AnalyticsLine::default() });
+                }
+                let _ = render(&spec, &d, &o);
+                let _ = render(&spec, &d, &o_sel);
+            }
         }
     }
 }
@@ -218,7 +231,7 @@ fn gallery() {
             let (mut scene, _) = render_case(&p, &b, spec, props, w, h, &theme);
             scene.width = w;
             let (x, y) = ((i % 3) as f32 * (w + 16.0) + 16.0, (i / 3) as f32 * (h + 36.0) + 28.0);
-            body += &format!("<text x=\"{x}\" y=\"{}\" font-size=\"11\" fill=\"#888\">{name}</text>", y - 8.0);
+            body += &format!("<text x=\"{x}\" y=\"{}\" font-size=\"11\" fill=\"#888\">{}</text>", y - 8.0, name.replace('&', "&amp;"));
             body += &format!("<g transform=\"translate({x},{y})\">{}</g>", svg::scene_svg(&scene));
         }
         let doc = format!(

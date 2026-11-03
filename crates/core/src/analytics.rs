@@ -190,6 +190,7 @@ pub fn linear_fit(series: &[f64]) -> Option<(f64, f64)> {
 }
 
 /// Inverse of the standard normal CDF (Acklam's approximation).
+#[allow(clippy::excessive_precision)]
 pub fn probit(p: f64) -> f64 {
     let p = p.clamp(1e-9, 1.0 - 1e-9);
     let a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
@@ -292,6 +293,7 @@ fn hw_fit(y: &[f64], m: usize, alpha: f64, beta: f64, gamma: f64) -> (Vec<f64>, 
 }
 
 /// Best Holt-Winters fit by grid search over the smoothing parameters.
+#[allow(clippy::type_complexity)]
 fn hw_best(y: &[f64], m: usize) -> (Vec<f64>, f64, f64, Vec<f64>, f64) {
     let grid = [0.1, 0.3, 0.5, 0.7, 0.9];
     let gammas: &[f64] = if m >= 2 && y.len() >= 2 * m { &[0.05, 0.2, 0.4, 0.6] } else { &[0.0] };

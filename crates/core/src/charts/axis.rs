@@ -115,7 +115,7 @@ pub fn cat_layout(labels: &[String], band: f32, size: f32, max_extent: f32) -> C
     }
     // Rotate 40°.
     let (s, c) = (40f32.to_radians().sin(), 40f32.to_radians().cos());
-    let step = ((size * 1.25) / band).ceil().max(1.0) as usize;
+    let step = ((size * 1.7) / band).ceil().max(1.0) as usize;
     let max_len = ((max_extent - size * 0.8) / s).clamp(20.0, 160.0);
     let len = maxw.min(max_len);
     let _ = c;

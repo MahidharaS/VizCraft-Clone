@@ -170,10 +170,10 @@ pub fn pivot(d: &VisualData, o: &RenderOpts, rows: &[usize], cf: &Cfg) -> Pivot 
 }
 
 fn add(s: &mut Series, ci: usize, v: Option<f64>, r: usize, hl: Option<f64>) {
-    if let Some(v) = v.filter(|v| v.is_finite()) {
-        if let Some(slot) = s.values.get_mut(ci) {
-            *slot = Some(slot.unwrap_or(0.0) + v);
-        }
+    if let Some(v) = v.filter(|v| v.is_finite())
+        && let Some(slot) = s.values.get_mut(ci)
+    {
+        *slot = Some(slot.unwrap_or(0.0) + v);
     }
     if let Some(h) = hl.filter(|v| v.is_finite())
         && let Some(slot) = s.hl.get_mut(ci)
@@ -393,7 +393,7 @@ pub fn draw(s: &mut Scene, spec: &VisualSpec, d: &VisualData, o: &RenderOpts, cf
     }
     let zero = |lo: f64, hi: f64, bar: bool| bar || (lo >= 0.0 && lo <= hi * 0.55) || (hi <= 0.0);
     let vlen = if cf.horizontal { area.w } else { area.h };
-    let mut sc = if cf.stack == Stack::Percent { Scale::linear(lo.min(0.0), hi.max(1.0).min(1.0), true, 5) } else { Scale::from_props(o, "yAxis", lo, hi, zero(lo, hi, has_bar), tick_target(vlen * 0.8)) };
+    let mut sc = if cf.stack == Stack::Percent { Scale::linear(lo.min(0.0), 1.0, true, 5) } else { Scale::from_props(o, "yAxis", lo, hi, zero(lo, hi, has_bar), tick_target(vlen * 0.8)) };
     let sc2 = Scale::linear(lo2, hi2, zero(lo2, hi2, has_bar2), tick_target(vlen * 0.8));
     let fmt = if cf.stack == Stack::Percent { ValueFmt::new("0%") } else { p.fmt.clone() };
     let fmt2 = p.fmt2.clone();
@@ -912,7 +912,8 @@ pub fn histogram(spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
     let hi = pts.iter().map(|p| p.0).fold(f64::NEG_INFINITY, f64::max);
     let binned = d.cols.get(ax).is_some_and(|c| c.label.ends_with("(bins)"));
     let distinct = d.distinct(ax).len();
-    let (width, nb) = if binned || distinct <= 12 {
+    let discrete = binned || distinct <= 12 && pts.iter().all(|p| p.0.fract() == 0.0) && hi - lo <= 24.0;
+    let (width, nb) = if discrete {
         let mut xs: Vec<f64> = pts.iter().map(|p| p.0).collect();
         xs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         xs.dedup();
@@ -920,11 +921,12 @@ pub fn histogram(spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
         let w = if w.is_finite() && w > 0.0 { w } else { 1.0 };
         (w, (((hi - lo) / w).round() as usize + 1).min(200))
     } else {
-        let target = o.props.num("bins.count", (pts.len() as f64).sqrt().clamp(5.0, 30.0)).max(1.0);
+        let weight: f64 = pts.iter().map(|p| p.1.max(0.0)).sum();
+        let target = o.props.num("bins.count", weight.max(pts.len() as f64).sqrt().clamp(5.0, 24.0)).max(1.0);
         let w = nice_step((hi - lo).max(1e-9) / target);
         (w, (((hi - lo) / w).floor() as usize + 1).min(200))
     };
-    let start = if binned || distinct <= 12 { lo } else { (lo / width).floor() * width };
+    let start = if discrete { lo } else { (lo / width).floor() * width };
     let mut counts = vec![0.0; nb.max(1)];
     for (x, w) in &pts {
         let b = (((x - start) / width).floor().max(0.0) as usize).min(nb.saturating_sub(1));
@@ -940,7 +942,7 @@ pub fn histogram(spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
     hd.cols.push(crate::vquery::DataCol { label: vlabel, role: "values".into(), field: FieldRef::measure("", "Count"), is_value: true, format: "#,0".into(), col_type: crate::build::ColType::Number, show_as: ShowAs::Value });
     for (i, c) in counts.iter().enumerate() {
         let a = start + width * i as f64;
-        let name = if binned || distinct <= 12 { fmt.short(a) } else { format!("{}–{}", fmt.short(a), fmt.short(a + width)) };
+        let name = if discrete { fmt.short(a) } else { format!("{}–{}", fmt.short(a), fmt.short(a + width)) };
         hd.rows.push(vec![Scalar::Text(name), Scalar::Num(*c)]);
     }
     let mut props = o.props.clone();

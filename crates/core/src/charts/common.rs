@@ -118,6 +118,22 @@ impl ValueFmt {
         self.explicit = o.props.text(&format!("{prefix}.format"), "");
         self
     }
+    /// Picks one display unit for a set of values (so labels read consistently).
+    pub fn uniform(mut self, max_abs: f64) -> ValueFmt {
+        if self.units == "Auto" && !self.is_percent() {
+            self.units = if max_abs >= 1e9 {
+                "Billions"
+            } else if max_abs >= 1e6 {
+                "Millions"
+            } else if max_abs >= 1e4 {
+                "Thousands"
+            } else {
+                "None"
+            }
+            .into();
+        }
+        self
+    }
     pub fn is_percent(&self) -> bool {
         self.format.contains('%')
     }
@@ -228,8 +244,17 @@ pub fn label_template(o: &RenderOpts, value: &str, category: &str, series: &str,
 
 /// Gridline stroke from the format pane.
 pub fn grid_line(o: &RenderOpts) -> Line {
-    let c = o.props.color("grid.color", grid_default(o));
+    let c = grid_color(o);
     Line::from_style(o.props.f32("grid.width", 1.0), c, &o.props.text("grid.style", "solid"))
+}
+
+/// The gridline colour: the format pane's, except that its light default gives way to a
+/// theme-derived colour on dark themes.
+pub fn grid_color(o: &RenderOpts) -> Color {
+    match o.props.color_opt("grid.color") {
+        Some(c) if !(c == Color::rgb(0xE6, 0xE8, 0xEC) && o.theme.visual_background.luminance() < 0.4) => c,
+        _ => grid_default(o),
+    }
 }
 
 pub fn grid_default(o: &RenderOpts) -> Color {
@@ -360,6 +385,7 @@ pub fn offset_shape(s: &mut Shape, dx: f32, dy: f32) {
 }
 
 /// Text with a soft rounded background (data labels with "labels.background").
+#[allow(clippy::too_many_arguments)]
 pub fn label_box(s: &mut Scene, o: &RenderOpts, x: f32, y: f32, text: &str, size: f32, color: Color, h: Align, v: Align) {
     if o.props.bool("labels.background", false) {
         let w = text_width(text, size) + 6.0;

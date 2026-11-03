@@ -17,6 +17,7 @@
 //! | `range:<min>:<max>` | a between-slicer track: map the pointer's x inside the rect linearly to [min, max] and move the nearest handle (`VisualSpec::range`) |
 //! | `expand:<row key>` / `collapse:<row key>` | matrix +/- buttons; the row key is the JSON array of the row path values (push/remove it in `VisualSpec::expanded`) |
 //! | `decomp:<level>:<scalar json>` | decomposition tree: pick that node at `level` (set `drill.path` to the path up to `level` plus this value) |
+//! | `qna:input` | the Q&A question box (focus a text field that edits `VisualSpec::question`) |
 //! | `scroll:<content height>` | table/matrix body: scrollable, with the total content height in points (scroll by setting the `scroll.offset` prop, in points) |
 
 pub mod ai;
