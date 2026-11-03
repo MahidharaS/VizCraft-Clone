@@ -253,6 +253,65 @@ pub fn shift_formula(input: &str, dr: i64, dc: i64) -> String {
     out
 }
 
+/// Adjusts a formula's references after rows (`rows = true`) or columns are inserted
+/// (`delta > 0`) or deleted (`delta < 0`) at 0-based index `at`, like Excel. References into
+/// deleted cells become `#REF!`. Only references to the formula's own sheet (no `Sheet!`
+/// prefix) move.
+pub fn adjust_refs(input: &str, rows: bool, at: usize, delta: i64) -> String {
+    let Some(f) = input.strip_prefix('=') else { return input.to_string() };
+    let Ok(toks) = lex(f) else { return input.to_string() };
+    let mut out = String::from("=");
+    let mut last = 0;
+    let moved = |v: usize| -> Option<i64> {
+        let v = v as i64;
+        let at = at as i64;
+        if delta >= 0 {
+            Some(if v >= at { v + delta } else { v })
+        } else if v >= at && v < at - delta {
+            None
+        } else if v >= at - delta {
+            Some(v + delta)
+        } else {
+            Some(v)
+        }
+    };
+    for (i, t) in toks.iter().enumerate() {
+        let qualified = i > 0 && matches!(toks.get(i - 1).map(|x| &x.tok), Some(Tok::Sheet(_)))
+            || (i > 2 && matches!(toks.get(i - 1).map(|x| &x.tok), Some(Tok::Colon)) && matches!(toks.get(i - 3).map(|x| &x.tok), Some(Tok::Sheet(_))));
+        if qualified {
+            continue;
+        }
+        let Tok::Word(w) = &t.tok else { continue };
+        if matches!(toks.get(i + 1).map(|x| &x.tok), Some(Tok::LParen)) {
+            continue;
+        }
+        let adj_colon = matches!(toks.get(i + 1).map(|x| &x.tok), Some(Tok::Colon)) || (i > 0 && matches!(toks.get(i - 1).map(|x| &x.tok), Some(Tok::Colon)));
+        let new = if let Some(r) = parse_ref_word(w) {
+            let (row, col) = if rows { (moved(r.row), Some(r.col as i64)) } else { (Some(r.row as i64), moved(r.col)) };
+            match (row, col) {
+                (Some(rr), Some(cc)) if rr >= 0 && cc >= 0 => Some(format!("{}{}{}{}", if r.col_abs { "$" } else { "" }, col_name(cc as usize), if r.row_abs { "$" } else { "" }, rr + 1)),
+                _ => Some("#REF!".to_string()),
+            }
+        } else if !rows && adj_colon && let Some((abs, c)) = parse_col_word(w) {
+            match moved(c) {
+                Some(cc) if cc >= 0 => Some(format!("{}{}", if abs { "$" } else { "" }, col_name(cc as usize))),
+                _ => Some("#REF!".into()),
+            }
+        } else {
+            None
+        };
+        if let Some(n) = new
+            && n != *w
+        {
+            out.push_str(f.get(last..t.start).unwrap_or(""));
+            out.push_str(&n);
+            last = t.end;
+        }
+    }
+    out.push_str(f.get(last..).unwrap_or(""));
+    out
+}
+
 /// A formula evaluated once per table row, with `[Column]` references (Excel syntax:
 /// `=IF([Qty] > 2, [Price] * 0.9, [Price])`, `[First] & " " & [Last]`). Used by flow nodes.
 #[derive(Clone, Debug)]
@@ -2214,6 +2273,14 @@ mod tests {
         assert_eq!(shift_formula("=Sheet2!A1*LOG10(2)", 1, 0), "=Sheet2!A2*LOG10(2)");
         assert_eq!(shift_formula("=SUM(A:A)", 0, 1), "=SUM(B:B)");
         assert_eq!(shift_formula("plain", 1, 1), "plain");
+    }
+
+    #[test]
+    fn adjusting_references() {
+        assert_eq!(adjust_refs("=A1+A5+$A$9", true, 2, 3), "=A1+A8+$A$12");
+        assert_eq!(adjust_refs("=A1+A3+A6", true, 2, -2), "=A1+#REF!+A4");
+        assert_eq!(adjust_refs("=SUM(B1:D1)+Other!C1", false, 2, 1), "=SUM(B1:E1)+Other!C1");
+        assert_eq!(adjust_refs("=SUM(C:C)", false, 0, 1), "=SUM(D:D)");
     }
 
     #[test]
