@@ -892,6 +892,8 @@ fn navigator(app: &VizApp, ui: &mut Ui, t: &Tokens, g: &mut GetData) {
                 egui::ScrollArea::vertical().id_salt("gd_nav").max_height(h - 50.0).min_scrolled_height(h - 50.0).show(ui, |ui| {
                     ui.set_min_width(240.0);
                     let q = g.nav_search.to_lowercase();
+                    let none_checked = !g.nav.iter().any(|n| n.checked);
+                    let mut tick: Option<usize> = None;
                     for (i, n) in g.nav.iter_mut().enumerate() {
                         if !q.is_empty() && !n.name.to_lowercase().contains(&q) {
                             continue;
@@ -908,8 +910,14 @@ fn navigator(app: &VizApp, ui: &mut Ui, t: &Tokens, g: &mut GetData) {
                             let sel = g.nav_sel == Some(i);
                             if ui.selectable_label(sel, &n.name).on_hover_text(&n.kind).clicked() {
                                 g.nav_sel = Some(i);
+                                if none_checked {
+                                    tick = Some(i);
+                                }
                             }
                         });
+                    }
+                    if let Some(n) = tick.and_then(|i| g.nav.get_mut(i)) {
+                        n.checked = true;
                     }
                 });
             });

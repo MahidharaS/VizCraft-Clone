@@ -539,7 +539,7 @@ fn body(app: &mut VizApp, ui: &mut Ui, t: &Tokens, k: &mut Kind, cols: &[String]
                 let mut remove_a = None;
                 let shown = if *advanced { aggs.len() } else { 1 };
                 for (i, (name, op, col)) in aggs.iter_mut().enumerate().take(shown) {
-                    ui.add(egui::TextEdit::singleline(name).desired_width(150.0));
+                    ui.add_sized(vec2(150.0, 22.0), egui::TextEdit::singleline(name));
                     index_combo(ui, ("pq_gb_op", i), op, AGG_OPS, 150.0);
                     if (2..=6).contains(op) {
                         combo(ui, ("pq_gb_c", i), col, cols, 170.0);
@@ -820,9 +820,9 @@ fn body(app: &mut VizApp, ui: &mut Ui, t: &Tokens, k: &mut Kind, cols: &[String]
                     ui.label(if i == 0 { "If" } else { "Else If" });
                     combo(ui, ("pq_cond_c", i), col, cols, 140.0);
                     index_combo(ui, ("pq_cond_o", i), op, COND_OPS, 160.0);
-                    ui.add(egui::TextEdit::singleline(value).desired_width(100.0).hint_text("Value"));
+                    ui.add_sized(vec2(110.0, 22.0), egui::TextEdit::singleline(value).hint_text("Value"));
                     ui.label("Then");
-                    ui.add(egui::TextEdit::singleline(out).desired_width(100.0).hint_text("Output"));
+                    ui.add_sized(vec2(110.0, 22.0), egui::TextEdit::singleline(out).hint_text("Output"));
                     if i > 0 && super::forms::glyph_button(ui, t, 'u', t.muted, "Move up").clicked() {
                         up = Some(i);
                     } else if i == 0 {
