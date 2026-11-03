@@ -6,6 +6,7 @@ mod date;
 mod list;
 mod number;
 mod other;
+pub mod html;
 pub mod source;
 pub mod table;
 mod text;
@@ -335,6 +336,7 @@ pub const NAMES: &[&str] = &[
     "Parquet.Document",
     "Percentage.From",
     "PostgreSQL.Database",
+    "Python.Execute",
     "Record.AddField",
     "Record.Field",
     "Record.FieldCount",
@@ -483,6 +485,7 @@ pub const NAMES: &[&str] = &[
     "Value.ReplaceType",
     "Value.Type",
     "Web.Contents",
+    "Web.Page",
     "Xml.Document",
     "Xml.Tables",
 ];

@@ -14,6 +14,7 @@ pub mod db;
 pub mod excel;
 pub mod files;
 pub mod parquet_doc;
+pub mod python;
 pub mod web;
 pub mod xml;
 
@@ -49,6 +50,7 @@ impl Host for DesktopHost {
             "Xml.Document" => xml::document(a.pos(0).unwrap_or_default()),
             "Parquet.Document" => parquet_doc::read(&a),
             "OData.Feed" => web::odata(&a),
+            "Python.Execute" => python::execute(&a),
             other => Err(Error::Eval(format!("The {other} connector isn't available."))),
         }
     }

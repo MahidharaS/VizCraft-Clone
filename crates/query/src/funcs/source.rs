@@ -105,6 +105,18 @@ fn web_url(url: &str, opts: &Value) -> String {
     u + &headers
 }
 
+/// A table as CSV text (header row, quoted where needed), for scripts.
+pub fn table_csv(t: &Table) -> String {
+    let q = |s: &str| if s.contains([',', '"', '\n', '\r']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s.to_string() };
+    let mut out = t.columns.iter().map(|c| q(c)).collect::<Vec<_>>().join(",");
+    out.push('\n');
+    for r in &t.rows {
+        out.push_str(&r.iter().map(|v| if v.is_null() { String::new() } else { q(&v.display()) }).collect::<Vec<_>>().join(","));
+        out.push('\n');
+    }
+    out
+}
+
 /// Parses delimited text into rows of text fields (quotes, doubled quotes, newlines in quotes).
 pub fn parse_csv(text: &str, delim: char, quotes: bool) -> Vec<Vec<String>> {
     let mut rows = Vec::new();
@@ -213,6 +225,25 @@ pub fn call(ev: &Evaluator, name: &str, a: &[Value]) -> Option<Result<Value>> {
                 }
             }
             ev.host.database(name, &texts, query.as_deref()).map(Value::table)
+        })(),
+        "Web.Page" => (|| {
+            let html = match arg(a, 0) {
+                Value::Text(t) => t.to_string(),
+                v => decode(&binary(v)?),
+            };
+            Ok(Value::table(super::html::web_page(&html)))
+        })(),
+        "Python.Execute" => (|| {
+            let script = text_arg(a, 0, name)?;
+            let mut texts = vec![script];
+            if let Value::Record(r) = arg(a, 1) {
+                for (k, v) in r.names.iter().zip(r.values.iter()) {
+                    if let Value::Table(t) = check(v.clone())? {
+                        texts.push(format!("\u{1}opt:{k}={}", table_csv(&t)));
+                    }
+                }
+            }
+            ev.host.database(name, &texts, None).map(Value::table)
         })(),
         "Excel.CurrentWorkbook" => ev.host.current_workbook().map(Value::table),
         "File.Contents" => text_arg(a, 0, name).and_then(|p| ev.host.file_contents(&p)).map(|b| Value::Binary(Rc::new(b))),

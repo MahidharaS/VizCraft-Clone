@@ -115,6 +115,27 @@ fn server_connection_strings() {
     assert_eq!((c.host.as_str(), c.port, c.database.as_str(), c.user.as_deref(), c.password.as_deref()), ("db.example.com", Some(6543), "sales", Some("ann"), Some("pw")));
 }
 
+#[test]
+fn python_script_returns_tables() {
+    if std::process::Command::new("python3").arg("--version").output().is_err() {
+        return;
+    }
+    let m = "Python.Execute(\"result = [dict(r, Double=float(r['A']) * 2) for r in dataset] if isinstance(dataset, list) else dataset.assign(Double=dataset['A'] * 2)\", [dataset = #table({\"A\"}, {{1}, {2}})])";
+    let t = eval(m);
+    let row = t.rows.iter().find(|r| r[0].display() == "result").expect("result");
+    let Value::Table(r) = &row[1] else { panic!() };
+    assert_eq!(r.cell(1, 1).as_number(), Some(4.0));
+}
+
+#[test]
+fn web_page_html_tables_from_file_url() {
+    let d = tmp("html");
+    let f = d.join("p.html");
+    std::fs::write(&f, "<table><tr><th>A</th></tr><tr><td>1</td></tr></table>").unwrap();
+    let t = eval(&format!("Web.Page(Web.Contents(\"file://{}\")){{0}}[Data]", f.to_string_lossy()));
+    assert_eq!(t.columns, vec!["A"]);
+}
+
 fn conn_of_for_test(a: &Args) -> db::Conn {
     // The same parsing the connectors use (through a public helper).
     db::parse_conn(a, "NOPE_USER", "NOPE_PASS")
