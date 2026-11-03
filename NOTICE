@@ -1,0 +1,16 @@
+VizCraft
+Copyright (c) VizCraft contributors.
+
+Licensed under either of Apache License, Version 2.0 (LICENSE-APACHE) or MIT license
+(LICENSE-MIT) at your option.
+
+The `crates/datamodel` (DAX engine) and `crates/query` (Power Query M engine) crates started
+as copies of the GridCraft Power Pivot and Power Query engines in this repository's
+`vizclone/` directory (GridCraft by the ArtCraft team, storytold/gridcraft, MIT OR Apache-2.0).
+
+VizCraft is a clean-room project. It is not affiliated with, endorsed by or connected to
+Microsoft (Power BI, Power Query, Fabric, Excel), Salesforce (Tableau), Figma, or the Orange
+or KNIME projects. Product names are used only to describe compatibility and familiar
+features. No vendor code, icons, artwork, fonts or sample files are included: every icon is
+drawn in code (apps/vizcraft/src/icons.rs) and every algorithm is an original implementation
+of standard published methods (Orange is GPL-licensed; none of its code is used).

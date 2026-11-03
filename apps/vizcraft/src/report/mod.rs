@@ -136,19 +136,30 @@ pub fn show(app: &mut VizApp, ui: &mut Ui) {
     keyboard(app, ui);
     pages::tabs(app, ui, &t);
     let kind = app.current_page().map(|p| p.kind).unwrap_or_default();
-    // Right panes.
+    let reading = app.report.reading;
+    // Right panes (hidden in reading view, like a published report).
     let pane_frame = egui::Frame::new().fill(t.panel).inner_margin(egui::Margin::same(8)).stroke(egui::Stroke::new(1.0, t.border));
-    if app.panes.data {
+    if reading {
+        if app.panes.filters {
+            egui::Panel::right("pane-filters").default_size(210.0).frame(pane_frame).show(ui, |ui| filters::pane(app, ui, &t));
+        } else {
+            collapsed_strip(ui, &t, "strip-filters", "Filters", &mut app.panes.filters);
+        }
+    }
+    if reading {
+    } else if app.panes.data {
         egui::Panel::right("pane-data").default_size(215.0).size_range(170.0..=420.0).frame(pane_frame).show(ui, |ui| panes::data_pane(app, ui, &t));
     } else {
         collapsed_strip(ui, &t, "strip-data", "Data", &mut app.panes.data);
     }
-    if app.panes.visualizations {
+    if reading {
+    } else if app.panes.visualizations {
         egui::Panel::right("pane-viz").default_size(250.0).size_range(210.0..=480.0).frame(pane_frame).show(ui, |ui| panes::visualizations(app, ui, &t));
     } else {
         collapsed_strip(ui, &t, "strip-viz", "Visualizations", &mut app.panes.visualizations);
     }
-    if app.panes.filters {
+    if reading {
+    } else if app.panes.filters {
         egui::Panel::right("pane-filters").default_size(210.0).size_range(170.0..=400.0).frame(pane_frame).show(ui, |ui| filters::pane(app, ui, &t));
     } else {
         collapsed_strip(ui, &t, "strip-filters", "Filters", &mut app.panes.filters);
@@ -170,6 +181,7 @@ pub fn show(app: &mut VizApp, ui: &mut Ui) {
         return;
     }
     match kind {
+        _ if reading => {}
         PageKind::Worksheet => {
             egui::Panel::left("marks-card").default_size(190.0).frame(pane_frame).show(ui, |ui| worksheet::marks_card(app, ui, &t));
             worksheet::shelves(app, ui, &t);

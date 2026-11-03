@@ -137,8 +137,8 @@ pub fn show(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
             page_painter.rect_filled(xf.el_rect(el).expand(2.0), 0.0, Color32::from_white_alpha(170));
         }
     }
-    // Selection chrome.
-    let sel: Vec<Element> = elements.iter().filter(|e| app.selected.contains(&e.id)).cloned().collect();
+    // Selection chrome (not in reading view).
+    let sel: Vec<Element> = if app.report.reading { vec![] } else { elements.iter().filter(|e| app.selected.contains(&e.id)).cloned().collect() };
     for el in &sel {
         let r = xf.el_rect(el);
         painter.rect_stroke(r, 2.0, Stroke::new(1.5, t.selection), StrokeKind::Outside);
@@ -517,6 +517,9 @@ impl KindText for Element {
 }
 
 fn start_drag(app: &mut VizApp, elements: &[Element], xf: PageXf, pos: Pos2, px: f32, py: f32, mods: egui::Modifiers) {
+    if app.report.reading {
+        return;
+    }
     let locked_all = app.project.report.settings.lock_objects;
     // Resize / rotate handles of the single selection.
     if app.selected.len() == 1
