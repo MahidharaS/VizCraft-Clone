@@ -66,6 +66,7 @@ pub struct GetData {
     /// Web: the format found when connecting.
     pub detected: String,
     steps_cache: Option<(String, Option<Vec<Step>>)>,
+    typed_cache: Option<(String, String)>,
 }
 
 /// The "More…" gallery.
@@ -144,7 +145,7 @@ fn kind_icon(kind: &str) -> &'static str {
 pub fn open(app: &mut VizApp, kind: &str) {
     match kind {
         "more" => {
-            app.pq.gallery = Some(Gallery::default());
+            app.pq.gallery = Some(Gallery { selected: Some(0), ..Default::default() });
         }
         "blank" => {
             let n = super::new_query(app, "Query1", "let\n    Source = \"\"\nin\n    Source".into(), true, None);
@@ -437,6 +438,19 @@ fn list_nav(app: &VizApp, g: &mut GetData) {
     }
 }
 
+/// The M with a Changed Type step from the data (cached per source M).
+fn typed_m(app: &VizApp, g: &mut GetData, steps: Vec<Step>) -> String {
+    let key = format!("{}|{}", build_m(&steps), g.detect);
+    if let Some((k, m)) = &g.typed_cache
+        && *k == key
+    {
+        return m.clone();
+    }
+    let m = with_types(app, steps, g.detect != 2);
+    g.typed_cache = Some((key, m.clone()));
+    m
+}
+
 /// Evaluates M for a preview (cached by the M text). Server sources preview 200 rows.
 fn preview(app: &VizApp, g: &mut GetData, m: &str) -> Result<Rc<Table>, String> {
     if let Some((k, r)) = &g.preview
@@ -567,7 +581,7 @@ fn cell_literal(s: &str) -> String {
 }
 
 /// Creates the queries; `transform` opens the editor instead of loading.
-fn finish(app: &mut VizApp, g: &GetData, transform: bool, combine: bool) -> Result<(), String> {
+pub fn finish(app: &mut VizApp, g: &GetData, transform: bool, combine: bool) -> Result<(), String> {
     let mut outs = outputs(app, g)?;
     if combine && g.kind == "folder" {
         outs = vec![(stem(&g.path), combine_m(app, g)?)];
@@ -847,7 +861,7 @@ fn file_body(app: &VizApp, ui: &mut Ui, t: &Tokens, g: &mut GetData) {
         return;
     }
     let Some(steps) = source_steps(app, g) else { return };
-    let m = build_m(&steps);
+    let m = typed_m(app, g, steps);
     let h = (ui.available_height() - 60.0).max(200.0);
     preview_box(app, ui, t, g, &m, h);
 }
@@ -1043,7 +1057,7 @@ fn web_body(app: &VizApp, ui: &mut Ui, t: &Tokens, g: &mut GetData) {
         }
         _ => {
             if let Some(steps) = source_steps(app, g) {
-                let m = build_m(&steps);
+                let m = typed_m(app, g, steps);
                 let h = (ui.available_height() - 60.0).max(200.0);
                 preview_box(app, ui, t, g, &m, h);
             }
@@ -1175,7 +1189,7 @@ fn enter_body(ui: &mut Ui, t: &Tokens, g: &mut GetData) {
                 for c in 0..ncols {
                     if let Some(name) = grid.cols.get_mut(c) {
                         egui::Frame::new().fill(t.panel_alt).stroke(Stroke::new(0.5, t.border)).show(ui, |ui| {
-                            ui.add(egui::TextEdit::singleline(name).desired_width(120.0).font(FontId::proportional(12.0)).frame(egui::Frame::NONE).text_color(t.text));
+                            ui.add_sized(vec2(130.0, 22.0), egui::TextEdit::singleline(name).font(FontId::proportional(12.0)).frame(egui::Frame::NONE).text_color(t.text).margin(egui::Margin::symmetric(5, 3)));
                         });
                     }
                 }
@@ -1191,7 +1205,7 @@ fn enter_body(ui: &mut Ui, t: &Tokens, g: &mut GetData) {
                     ui.label(RichText::new((r + 1).to_string()).size(11.0).color(t.muted));
                     for c in 0..ncols {
                         if let Some(cell) = grid.rows.get_mut(r).and_then(|row| row.get_mut(c)) {
-                            let resp = egui::Frame::new().stroke(Stroke::new(0.5, t.border)).show(ui, |ui| ui.add(egui::TextEdit::singleline(cell).desired_width(120.0).frame(egui::Frame::NONE))).inner;
+                            let resp = egui::Frame::new().stroke(Stroke::new(0.5, t.border)).show(ui, |ui| ui.add_sized(vec2(130.0, 22.0), egui::TextEdit::singleline(cell).frame(egui::Frame::NONE).margin(egui::Margin::symmetric(5, 3)))).inner;
                             if resp.changed() && (cell.contains('\t') || cell.contains('\n')) {
                                 paste = Some((r, c, std::mem::take(cell)));
                             }

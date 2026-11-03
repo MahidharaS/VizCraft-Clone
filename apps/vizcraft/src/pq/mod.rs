@@ -481,7 +481,11 @@ fn demo_one(app: &mut VizApp, v: &str) {
         }
         "merge" => {
             open_editor(app, None);
-            app.pq.dialog = Some(Dialog::merge(app, false));
+            let mut d = Dialog::merge(app, false);
+            if let dialogs::Kind::Merge { other, .. } = &mut d.kind {
+                *other = arg.to_string();
+            }
+            app.pq.dialog = Some(d);
         }
         "append" => {
             open_editor(app, None);
@@ -516,6 +520,13 @@ fn demo_one(app: &mut VizApp, v: &str) {
             app.pq.tab = arg.parse().unwrap_or(0);
         }
         "query" => open_editor(app, Some(arg)),
+        "load" | "transform" => {
+            if let Some(g) = app.pq.get_data.take()
+                && let Err(e) = getdata::finish(app, &g, what == "transform", false)
+            {
+                app.error(e);
+            }
+        }
         "col" => {
             open_editor(app, None);
             app.pq.selected = vec![arg.to_string()];

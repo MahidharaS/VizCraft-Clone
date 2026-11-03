@@ -707,7 +707,7 @@ fn body(app: &mut VizApp, ui: &mut Ui, t: &Tokens, k: &mut Kind, cols: &[String]
             ui.horizontal(|ui| {
                 ui.label(RichText::new(&app.pq.query).strong().size(14.0));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(RichText::new("Display options: monospace").small().color(t.muted));
+                    ui.label(RichText::new("Ctrl+Z undoes the change after Done").small().color(t.muted));
                 });
             });
             ui.add_space(4.0);
