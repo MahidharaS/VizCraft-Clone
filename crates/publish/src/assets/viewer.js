@@ -182,8 +182,8 @@
         tabs.push('<button class="vc-tab' + (on ? ' vc-on' : '') + '" data-story="' + s.id + '">' + ICON.story + esc(s.name || 'Story') + '</button>');
       });
     }
-    $('vc-tabs').innerHTML = tabs.join('');
-    $('vc-tabs').hidden = tabs.length < 2 && !d.stories.length;
+    $('vc-tab-list').innerHTML = tabs.join('');
+    $('vc-tabs').hidden = tabs.length < 2 && !d.stories.length && !S.embed;
     // Story navigator.
     var sb = $('vc-story');
     if (S.mode === 'story') {
@@ -481,10 +481,16 @@
     d.bookmarks = d.bookmarks || [];
     d.stories = d.stories || [];
     d.parameters = d.parameters || [];
-    if (qs.get('embed') === '1') $('vc-app').classList.add('vc-embed');
+    if (qs.get('embed') === '1') {
+      // Embedded (the VizCraft Service portal): the actions move into the page tab bar.
+      S.embed = true;
+      $('vc-app').classList.add('vc-embed');
+      $('vc-tabs').appendChild(document.querySelector('.vc-actions'));
+    }
     var want = qs.get('layout');
     S.layout = (want === 'mobile' || want === 'desktop') ? want : (d.includeMobile && window.innerWidth < 640 ? 'mobile' : 'desktop');
     if (want) S.userLayout = true;
+    if (want && S.embed) $('vc-app').classList.add('vc-mobile-only');
     if (!d.includeMobile) S.layout = 'desktop';
     var h = new URLSearchParams(location.hash.slice(1));
     var first = tabPages()[0] || d.pages[0];

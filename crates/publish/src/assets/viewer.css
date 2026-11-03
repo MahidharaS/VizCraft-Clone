@@ -51,13 +51,15 @@ svg { display: block; }
 .vc-menu button svg { width: 15px; height: 15px; fill: none; stroke: var(--vc-accent); stroke-width: 1.6; }
 
 /* Page tabs */
-.vc-tabs { flex: none; display: flex; align-items: stretch; gap: 2px; height: 42px; padding: 0 12px; background: var(--vc-bar); border-bottom: 1px solid var(--vc-border); overflow-x: auto; scrollbar-width: none; }
-.vc-tabs::-webkit-scrollbar { display: none; }
+.vc-tabs { flex: none; display: flex; align-items: center; height: 42px; padding: 0 12px; background: var(--vc-bar); border-bottom: 1px solid var(--vc-border); }
+.vc-tab-list { align-self: stretch; }
 .vc-tab { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 0 14px; border: 0; background: none; color: var(--vc-muted); font-size: 13px; cursor: pointer; white-space: nowrap; }
 .vc-tab:hover { color: var(--vc-text); }
 .vc-tab.vc-on { color: var(--vc-text); font-weight: 600; }
 .vc-tab.vc-on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--vc-accent); }
 .vc-tab svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.vc-tab-list { display: flex; align-items: stretch; gap: 2px; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.vc-tab-list::-webkit-scrollbar { display: none; }
 .vc-tab-sep { width: 1px; margin: 10px 6px; background: var(--vc-border); flex: none; }
 
 /* Stage */
@@ -148,6 +150,16 @@ svg { display: block; }
 
 /* Embedded (?embed=1) and narrow screens */
 .vc-embed .vc-top, .vc-embed .vc-foot { display: none; }
+.vc-embed .vc-tabs { gap: 8px; }
+.vc-embed .vc-tabs .vc-actions { margin-left: auto; padding-left: 8px; }
+.vc-embed .vc-tabs .vc-btn { height: 30px; color: var(--vc-text); }
+.vc-embed .vc-tabs .vc-btn:hover { background: #f1f4f8; }
+.vc-embed .vc-tabs .vc-btn.vc-on { background: var(--vc-accent-soft); color: #1d4fb8; }
+.vc-embed .vc-tabs .vc-seg { background: #f1f4f8; }
+.vc-embed .vc-tabs .vc-seg button { color: var(--vc-muted); }
+.vc-embed .vc-tabs .vc-seg button.vc-on { background: #fff; color: var(--vc-text); box-shadow: 0 1px 2px rgba(15,23,42,.15); }
+.vc-embed .vc-menu { top: 36px; }
+.vc-embed.vc-mobile-only .vc-seg, .vc-embed.vc-mobile-only #vc-full { display: none; }
 @media (max-width: 760px) {
   .vc-actions .vc-btn span, .vc-seg span { display: none; }
   .vc-actions .vc-btn { padding: 0 8px; }

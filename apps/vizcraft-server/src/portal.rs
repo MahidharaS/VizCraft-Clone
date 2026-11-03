@@ -52,8 +52,9 @@ h1{margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-.01em}
 .frame{width:100%;height:calc(100vh - 52px);border:0;display:block;background:#eef1f5}
 .phone-stage{height:calc(100vh - 52px);display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#e9eef6,#d9e0ea);overflow:auto;padding:24px}
 .phone{position:relative;width:404px;height:min(840px,calc(100vh - 100px));padding:14px;border-radius:54px;background:#111827;box-shadow:0 0 0 2px #374151,0 30px 80px rgba(15,23,42,.35)}
-.phone:before{content:"";position:absolute;top:22px;left:50%;width:110px;height:28px;margin-left:-55px;border-radius:16px;background:#000;z-index:2}
-.phone iframe{width:100%;height:100%;border:0;border-radius:40px;background:#fff;display:block}
+.phone:before{content:"";position:absolute;top:24px;left:50%;width:96px;height:26px;margin-left:-48px;border-radius:14px;background:#000;z-index:2}
+.screen{width:100%;height:100%;padding-top:42px;border-radius:40px;background:#0f172a;overflow:hidden}
+.phone iframe{width:100%;height:100%;border:0;border-radius:0 0 40px 40px;background:#fff;display:block}
 "#;
 
 fn page(ctx: &Ctx, title: &str, top: &str, body: &str) -> String {
@@ -134,9 +135,9 @@ pub fn report(ctx: &Ctx, m: &Meta, phone: bool) -> String {
         esc(&m.name)
     );
     let body = if phone {
-        format!("<div class=\"phone-stage\"><div class=\"phone\"><iframe title=\"{}\" src=\"{base}/files/?layout=mobile&amp;embed=1\"></iframe></div></div>", esc(&m.name))
+        format!("<div class=\"phone-stage\"><div class=\"phone\"><div class=\"screen\"><iframe title=\"{}\" src=\"{base}/files/?layout=mobile&amp;embed=1\"></iframe></div></div></div>", esc(&m.name))
     } else {
-        format!("<iframe class=\"frame\" title=\"{}\" src=\"{base}/files/\" allowfullscreen></iframe>", esc(&m.name))
+        format!("<iframe class=\"frame\" title=\"{}\" src=\"{base}/files/?embed=1\" allowfullscreen></iframe>", esc(&m.name))
     };
     let script = format!(
         "<script>document.getElementById('del').addEventListener('click',function(){{if(!confirm('Delete {}? This removes it for everyone.'))return;var t=sessionStorage.getItem('vc-token')||prompt('Service token (leave empty if the service has none):')||'';fetch('/api/reports/{}/{}',{{method:'DELETE',headers:t?{{Authorization:'Bearer '+t}}:{{}}}}).then(function(r){{if(r.ok){{sessionStorage.setItem('vc-token',t);location.href='/w/{}';}}else r.json().then(function(j){{sessionStorage.removeItem('vc-token');alert(j.error||'Could not delete.');}});}});}});</script>",
