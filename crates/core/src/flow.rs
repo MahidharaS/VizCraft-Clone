@@ -132,29 +132,29 @@ pub fn catalog() -> Vec<NodeType> {
     };
     vec![
         // ---------------------------------------------------------------- Data
-        NodeType { id: "source.query", category: "Data", label: "Query", icon: "transform", inputs: vec![], outputs: vec![table("data")], params: vec![p("name", "Query", Query, json!(""), "A Power Query query's output.")], help: "Reads the output of a Power Query query." },
+        NodeType { id: "source.query", category: "Data", label: "Query", icon: "query", inputs: vec![], outputs: vec![table("data")], params: vec![p("name", "Query", Query, json!(""), "A Power Query query's output.")], help: "Reads the output of a Power Query query." },
         NodeType { id: "source.sheet", category: "Data", label: "Data sheet", icon: "sheet", inputs: vec![], outputs: vec![table("data")], params: vec![p("name", "Sheet", Sheet, json!(""), "An Excel-like data sheet.")], help: "Reads a data sheet (evaluated formulas)." },
         NodeType { id: "source.table", category: "Data", label: "Model table", icon: "table", inputs: vec![], outputs: vec![table("data")], params: vec![p("name", "Table", ModelTable, json!(""), "A table of the semantic model.")], help: "Reads a table of the model (as loaded)." },
         NodeType {
             id: "source.csv",
             category: "Data",
             label: "CSV file",
-            icon: "data",
+            icon: "csv",
             inputs: vec![],
             outputs: vec![table("data")],
             params: vec![p("path", "File", FileOpen, json!(""), "A .csv / .tsv / .txt file."), p("delimiter", "Delimiter", Choice(&[("auto", "Detect"), (",", "Comma"), (";", "Semicolon"), ("\t", "Tab"), ("|", "Pipe")]), json!("auto"), ""), p("header", "First row has headers", Bool, json!(true), "")],
             help: "Reads a delimited text file.",
         },
         // ---------------------------------------------------------------- Transform
-        NodeType { id: "tf.select", category: "Transform", label: "Select columns", icon: "column", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("columns", "Columns", Columns(0), json!([]), ""), p("mode", "Mode", Choice(&[("keep", "Keep these"), ("remove", "Remove these")]), json!("keep"), "")], help: "Keeps or removes columns." },
+        NodeType { id: "tf.select", category: "Transform", label: "Select columns", icon: "columns", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("columns", "Columns", Columns(0), json!([]), ""), p("mode", "Mode", Choice(&[("keep", "Keep these"), ("remove", "Remove these")]), json!("keep"), "")], help: "Keeps or removes columns." },
         NodeType { id: "tf.filter", category: "Transform", label: "Filter rows", icon: "filter", inputs: vec![table("data")], outputs: vec![table("matching"), table("other")], params: vec![p("conditions", "Conditions", Conditions, json!([]), ""), p("match", "Match", Choice(&[("all", "All conditions"), ("any", "Any condition")]), json!("all"), "")], help: "Keeps the rows that meet the conditions (the rest go to the second output)." },
-        NodeType { id: "tf.sort", category: "Transform", label: "Sort", icon: "filter", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("keys", "Sort by", SortKeys, json!([]), "")], help: "Sorts rows by one or more columns." },
-        NodeType { id: "tf.group", category: "Transform", label: "Group by", icon: "measure", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("by", "Group by", Columns(0), json!([]), "Leave empty to aggregate the whole table."), p("aggregates", "Aggregations", Aggregates, json!([]), "")], help: "Groups rows and aggregates columns." },
+        NodeType { id: "tf.sort", category: "Transform", label: "Sort", icon: "sort", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("keys", "Sort by", SortKeys, json!([]), "")], help: "Sorts rows by one or more columns." },
+        NodeType { id: "tf.group", category: "Transform", label: "Group by", icon: "group", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("by", "Group by", Columns(0), json!([]), "Leave empty to aggregate the whole table."), p("aggregates", "Aggregations", Aggregates, json!([]), "")], help: "Groups rows and aggregates columns." },
         NodeType {
             id: "tf.join",
             category: "Transform",
             label: "Join",
-            icon: "relationship",
+            icon: "join",
             inputs: vec![table("left"), table("right")],
             outputs: vec![table("data")],
             params: vec![
@@ -164,12 +164,12 @@ pub fn catalog() -> Vec<NodeType> {
             ],
             help: "Joins two tables on key columns.",
         },
-        NodeType { id: "tf.concat", category: "Transform", label: "Concatenate", icon: "table", inputs: vec![table("first"), table("second")], outputs: vec![table("data")], params: vec![p("mode", "Columns", Choice(&[("union", "All columns"), ("intersection", "Common columns only")]), json!("union"), "")], help: "Stacks the rows of two tables (columns matched by name)." },
+        NodeType { id: "tf.concat", category: "Transform", label: "Concatenate", icon: "concat", inputs: vec![table("first"), table("second")], outputs: vec![table("data")], params: vec![p("mode", "Columns", Choice(&[("union", "All columns"), ("intersection", "Common columns only")]), json!("union"), "")], help: "Stacks the rows of two tables (columns matched by name)." },
         NodeType {
             id: "tf.formula",
             category: "Transform",
             label: "Formula column",
-            icon: "column",
+            icon: "formula",
             inputs: vec![table("data")],
             outputs: vec![table("data")],
             params: vec![p("name", "New column", Text, json!("Result"), ""), p("expression", "Formula", Code("formula"), json!("=[Column1] * 2"), "Excel syntax with [Column] references: =IF([Qty] > 2, [Price] * 0.9, [Price])")],
@@ -179,18 +179,18 @@ pub fn catalog() -> Vec<NodeType> {
             id: "tf.impute",
             category: "Transform",
             label: "Impute missing",
-            icon: "sparkle",
+            icon: "impute",
             inputs: vec![table("data")],
             outputs: vec![table("data")],
             params: vec![p("columns", "Columns", Columns(0), json!([]), "Empty: every column."), p("method", "Replace with", Choice(&[("mean", "Mean"), ("median", "Median"), ("mode", "Most frequent"), ("constant", "A value"), ("drop", "Remove the row")]), json!("mean"), ""), p("value", "Value", Text, json!("0"), "For “A value”.")],
             help: "Fills in blank values.",
         },
-        NodeType { id: "tf.normalize", category: "Transform", label: "Normalize", icon: "measure", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("columns", "Columns", Columns(0), json!([]), "Empty: numeric columns."), p("method", "Method", Choice(&[("zscore", "Standardize (z-score)"), ("minmax", "Scale to 0–1")]), json!("zscore"), "")], help: "Rescales numeric columns." },
+        NodeType { id: "tf.normalize", category: "Transform", label: "Normalize", icon: "normalize", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("columns", "Columns", Columns(0), json!([]), "Empty: numeric columns."), p("method", "Method", Choice(&[("zscore", "Standardize (z-score)"), ("minmax", "Scale to 0–1")]), json!("zscore"), "")], help: "Rescales numeric columns." },
         NodeType {
             id: "tf.bin",
             category: "Transform",
             label: "Discretize",
-            icon: "dashboard",
+            icon: "bin",
             inputs: vec![table("data")],
             outputs: vec![table("data")],
             params: vec![p("column", "Column", Column(0), json!(""), ""), p("bins", "Bins", num(2.0, 50.0, 1.0), json!(4), ""), p("method", "Method", Choice(&[("width", "Equal width"), ("quantile", "Equal frequency")]), json!("width"), ""), p("name", "New column", Text, json!(""), "Empty: “<column> bin”.")],
@@ -200,7 +200,7 @@ pub fn catalog() -> Vec<NodeType> {
             id: "tf.sample",
             category: "Transform",
             label: "Sample",
-            icon: "filter",
+            icon: "sample",
             inputs: vec![table("data")],
             outputs: vec![table("sample"), table("remaining")],
             params: vec![p("mode", "Mode", Choice(&[("random", "Random rows"), ("fraction", "Random fraction"), ("first", "First rows")]), json!("random"), ""), p("n", "Rows", num(1.0, 1e7, 1.0), json!(100), ""), p("fraction", "Fraction", num(0.0, 1.0, 0.05), json!(0.2), ""), p("seed", "Seed", num(0.0, 1e9, 1.0), json!(42), "")],
@@ -210,20 +210,20 @@ pub fn catalog() -> Vec<NodeType> {
             id: "tf.pivot",
             category: "Transform",
             label: "Pivot",
-            icon: "table",
+            icon: "pivot",
             inputs: vec![table("data")],
             outputs: vec![table("data")],
             params: vec![p("rows", "Row keys", Columns(0), json!([]), ""), p("column", "Pivot column", Column(0), json!(""), "Its values become columns."), p("value", "Values", Column(0), json!(""), ""), p("op", "Aggregation", Choice(AGG_OPS), json!("sum"), "")],
             help: "Spreads the values of a column into new columns.",
         },
-        NodeType { id: "tf.unpivot", category: "Transform", label: "Unpivot", icon: "table", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("keep", "Keep columns", Columns(0), json!([]), "The other columns turn into Attribute/Value rows."), p("attribute", "Attribute name", Text, json!("Attribute"), ""), p("value", "Value name", Text, json!("Value"), "")], help: "Turns columns into rows." },
-        NodeType { id: "tf.dedupe", category: "Transform", label: "Remove duplicates", icon: "filter", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("columns", "Compare columns", Columns(0), json!([]), "Empty: whole rows.")], help: "Keeps the first of rows that repeat." },
+        NodeType { id: "tf.unpivot", category: "Transform", label: "Unpivot", icon: "unpivot", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("keep", "Keep columns", Columns(0), json!([]), "The other columns turn into Attribute/Value rows."), p("attribute", "Attribute name", Text, json!("Attribute"), ""), p("value", "Value name", Text, json!("Value"), "")], help: "Turns columns into rows." },
+        NodeType { id: "tf.dedupe", category: "Transform", label: "Remove duplicates", icon: "dedupe", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("columns", "Compare columns", Columns(0), json!([]), "Empty: whole rows.")], help: "Keeps the first of rows that repeat." },
         // ---------------------------------------------------------------- Unsupervised
         NodeType {
             id: "ml.kmeans",
             category: "Unsupervised",
             label: "k-Means",
-            icon: "ai",
+            icon: "cluster",
             inputs: vec![table("data")],
             outputs: vec![table("data"), table("centroids")],
             params: vec![
@@ -241,7 +241,7 @@ pub fn catalog() -> Vec<NodeType> {
             id: "ml.hclust",
             category: "Unsupervised",
             label: "Hierarchical clustering",
-            icon: "ai",
+            icon: "hclust",
             inputs: vec![table("data")],
             outputs: vec![table("data")],
             params: vec![p("columns", "Columns", Columns(0), json!([]), ""), p("k", "Clusters", num(1.0, 50.0, 1.0), json!(3), "Where to cut the tree."), p("normalize", "Normalize columns", Bool, json!(true), ""), p("output", "Cluster column", Text, json!("Cluster"), "")],
@@ -251,7 +251,7 @@ pub fn catalog() -> Vec<NodeType> {
             id: "ml.dbscan",
             category: "Unsupervised",
             label: "DBSCAN",
-            icon: "ai",
+            icon: "dbscan",
             inputs: vec![table("data")],
             outputs: vec![table("data")],
             params: vec![p("columns", "Columns", Columns(0), json!([]), ""), p("eps", "Neighbourhood (ε)", num(0.0, 1e6, 0.05), json!(0.5), "In normalized units when normalizing."), p("min_points", "Core point neighbours", num(1.0, 1000.0, 1.0), json!(4), ""), p("normalize", "Normalize columns", Bool, json!(true), ""), p("output", "Cluster column", Text, json!("Cluster"), "")],
@@ -261,7 +261,7 @@ pub fn catalog() -> Vec<NodeType> {
             id: "ml.pca",
             category: "Unsupervised",
             label: "PCA",
-            icon: "ai",
+            icon: "pca",
             inputs: vec![table("data")],
             outputs: vec![table("data"), table("variance")],
             params: vec![p("columns", "Columns", Columns(0), json!([]), ""), p("components", "Components", num(1.0, 50.0, 1.0), json!(2), ""), p("standardize", "Standardize", Bool, json!(true), ""), p("keep", "Keep original columns", Bool, json!(true), "")],
@@ -272,18 +272,18 @@ pub fn catalog() -> Vec<NodeType> {
             id: "ml.split",
             category: "Supervised",
             label: "Train/test split",
-            icon: "filter",
+            icon: "split",
             inputs: vec![table("data")],
             outputs: vec![table("train"), table("test")],
             params: vec![p("train", "Training share", num(0.05, 0.95, 0.05), json!(0.7), ""), p("stratify", "Stratify by", Column(0), json!(""), "Keeps class proportions (optional)."), p("seed", "Seed", num(0.0, 1e9, 1.0), json!(42), "")],
             help: "Splits rows into training and test sets.",
         },
-        NodeType { id: "ml.linreg", category: "Supervised", label: "Linear regression", icon: "measure", inputs: vec![table("data")], outputs: vec![model("model"), table("fitted")], params: learner_common(vec![]), help: "Ordinary least squares: coefficients, R²." },
+        NodeType { id: "ml.linreg", category: "Supervised", label: "Linear regression", icon: "linear", inputs: vec![table("data")], outputs: vec![model("model"), table("fitted")], params: learner_common(vec![]), help: "Ordinary least squares: coefficients, R²." },
         NodeType {
             id: "ml.logreg",
             category: "Supervised",
             label: "Logistic regression",
-            icon: "measure",
+            icon: "logistic",
             inputs: vec![table("data")],
             outputs: vec![model("model"), table("fitted")],
             params: learner_common(vec![p("iterations", "Iterations", num(10.0, 10000.0, 10.0), json!(400), ""), p("learning_rate", "Learning rate", num(0.001, 5.0, 0.01), json!(0.3), ""), p("l2", "Regularization (L2)", num(0.0, 10.0, 0.001), json!(0.001), "")]),
@@ -293,7 +293,7 @@ pub fn catalog() -> Vec<NodeType> {
             id: "ml.tree",
             category: "Supervised",
             label: "Decision tree",
-            icon: "relationship",
+            icon: "tree",
             inputs: vec![table("data")],
             outputs: vec![model("model"), table("fitted")],
             params: learner_common(vec![p("task", "Task", Choice(&[("auto", "Automatic"), ("classification", "Classification"), ("regression", "Regression")]), json!("auto"), ""), p("max_depth", "Max depth", num(1.0, 30.0, 1.0), json!(5), ""), p("min_leaf", "Min rows per leaf", num(1.0, 1000.0, 1.0), json!(2), "")]),
@@ -303,32 +303,32 @@ pub fn catalog() -> Vec<NodeType> {
             id: "ml.forest",
             category: "Supervised",
             label: "Random forest",
-            icon: "relationship",
+            icon: "forest",
             inputs: vec![table("data")],
             outputs: vec![model("model"), table("fitted")],
             params: learner_common(vec![p("task", "Task", Choice(&[("auto", "Automatic"), ("classification", "Classification"), ("regression", "Regression")]), json!("auto"), ""), p("trees", "Trees", num(1.0, 500.0, 1.0), json!(50), ""), p("max_depth", "Max depth", num(1.0, 30.0, 1.0), json!(8), ""), p("seed", "Seed", num(0.0, 1e9, 1.0), json!(42), "")]),
             help: "Bagged decision trees with random feature subsets.",
         },
-        NodeType { id: "ml.nb", category: "Supervised", label: "Naive Bayes", icon: "measure", inputs: vec![table("data")], outputs: vec![model("model"), table("fitted")], params: learner_common(vec![]), help: "Gaussian naive Bayes classifier." },
+        NodeType { id: "ml.nb", category: "Supervised", label: "Naive Bayes", icon: "bayes", inputs: vec![table("data")], outputs: vec![model("model"), table("fitted")], params: learner_common(vec![]), help: "Gaussian naive Bayes classifier." },
         NodeType {
             id: "ml.knn",
             category: "Supervised",
             label: "kNN",
-            icon: "ai",
+            icon: "knn",
             inputs: vec![table("data")],
             outputs: vec![model("model"), table("fitted")],
             params: learner_common(vec![p("task", "Task", Choice(&[("auto", "Automatic"), ("classification", "Classification"), ("regression", "Regression")]), json!("auto"), ""), p("k", "Neighbours (k)", num(1.0, 200.0, 1.0), json!(5), "")]),
             help: "k-nearest neighbours (standardized features).",
         },
-        NodeType { id: "ml.predict", category: "Supervised", label: "Predict", icon: "sparkle", inputs: vec![model("model"), table("data")], outputs: vec![table("data")], params: vec![p("output", "Prediction column", Text, json!("Prediction"), ""), p("probabilities", "Add class probabilities", Bool, json!(true), "")], help: "Applies a trained model to new rows." },
-        NodeType { id: "ml.score", category: "Supervised", label: "Test & Score", icon: "dashboard", inputs: vec![model("model"), table("test")], outputs: vec![table("metrics"), table("predictions")], params: vec![], help: "Evaluates a model on test data: accuracy, precision, recall, F1, AUC or RMSE, MAE, R²." },
-        NodeType { id: "ml.confusion", category: "Supervised", label: "Confusion matrix", icon: "table", inputs: vec![table("data")], outputs: vec![table("matrix")], params: vec![p("actual", "Actual", Column(0), json!(""), ""), p("predicted", "Predicted", Column(0), json!("Prediction"), "")], help: "Counts of actual vs predicted classes." },
+        NodeType { id: "ml.predict", category: "Supervised", label: "Predict", icon: "predict", inputs: vec![model("model"), table("data")], outputs: vec![table("data")], params: vec![p("output", "Prediction column", Text, json!("Prediction"), ""), p("probabilities", "Add class probabilities", Bool, json!(true), "")], help: "Applies a trained model to new rows." },
+        NodeType { id: "ml.score", category: "Supervised", label: "Test & Score", icon: "score", inputs: vec![model("model"), table("test")], outputs: vec![table("metrics"), table("predictions")], params: vec![], help: "Evaluates a model on test data: accuracy, precision, recall, F1, AUC or RMSE, MAE, R²." },
+        NodeType { id: "ml.confusion", category: "Supervised", label: "Confusion matrix", icon: "confusion", inputs: vec![table("data")], outputs: vec![table("matrix")], params: vec![p("actual", "Actual", Column(0), json!(""), ""), p("predicted", "Predicted", Column(0), json!("Prediction"), "")], help: "Counts of actual vs predicted classes." },
         // ---------------------------------------------------------------- Statistics
         NodeType {
             id: "stat.outliers",
             category: "Statistics",
             label: "Outliers",
-            icon: "filter",
+            icon: "outlier",
             inputs: vec![table("data")],
             outputs: vec![table("data")],
             params: vec![
@@ -339,9 +339,9 @@ pub fn catalog() -> Vec<NodeType> {
             ],
             help: "Finds unusual rows.",
         },
-        NodeType { id: "stat.corr", category: "Statistics", label: "Correlations", icon: "dashboard", inputs: vec![table("data")], outputs: vec![table("matrix")], params: vec![p("columns", "Columns", Columns(0), json!([]), "")], help: "Pearson correlation matrix." },
-        NodeType { id: "stat.stats", category: "Statistics", label: "Feature statistics", icon: "table", inputs: vec![table("data")], outputs: vec![table("statistics")], params: vec![], help: "Count, missing, mean, quartiles… per column." },
-        NodeType { id: "stat.dist", category: "Statistics", label: "Distribution", icon: "dashboard", inputs: vec![table("data")], outputs: vec![table("bins")], params: vec![p("column", "Column", Column(0), json!(""), ""), p("bins", "Bins", num(2.0, 100.0, 1.0), json!(12), "")], help: "Histogram of a numeric column or counts of a categorical one." },
+        NodeType { id: "stat.corr", category: "Statistics", label: "Correlations", icon: "corr", inputs: vec![table("data")], outputs: vec![table("matrix")], params: vec![p("columns", "Columns", Columns(0), json!([]), "")], help: "Pearson correlation matrix." },
+        NodeType { id: "stat.stats", category: "Statistics", label: "Feature statistics", icon: "stats", inputs: vec![table("data")], outputs: vec![table("statistics")], params: vec![], help: "Count, missing, mean, quartiles… per column." },
+        NodeType { id: "stat.dist", category: "Statistics", label: "Distribution", icon: "dist", inputs: vec![table("data")], outputs: vec![table("bins")], params: vec![p("column", "Column", Column(0), json!(""), ""), p("bins", "Bins", num(2.0, 100.0, 1.0), json!(12), "")], help: "Histogram of a numeric column or counts of a categorical one." },
         // ---------------------------------------------------------------- Scripting
         NodeType {
             id: "script.python",
@@ -354,7 +354,7 @@ pub fn catalog() -> Vec<NodeType> {
             help: "Runs python3 with in_df / in_df2; returns out_df.",
         },
         // ---------------------------------------------------------------- Output
-        NodeType { id: "out.table", category: "Output", label: "Save as model table", icon: "model", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("name", "Table name", Text, json!(""), "The model table this output becomes (Add to model).")], help: "Makes the data a table of the model (like a Fabric lakehouse table)." },
+        NodeType { id: "out.table", category: "Output", label: "Save as model table", icon: "save", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("name", "Table name", Text, json!(""), "The model table this output becomes (Add to model).")], help: "Makes the data a table of the model (like a Fabric lakehouse table)." },
         NodeType { id: "out.csv", category: "Output", label: "Export CSV", icon: "export", inputs: vec![table("data")], outputs: vec![table("data")], params: vec![p("path", "File", FileSave, json!(""), "Written on each run.")], help: "Writes the data to a CSV file." },
     ]
 }
@@ -2024,6 +2024,8 @@ if _meta['want_out_df']:
     _g['out_df'] = _g.get('in_df')
 def _write(v, path):
     if _PANDAS and isinstance(v, pd.DataFrame):
+        if not isinstance(v.index, pd.RangeIndex):
+            v = v.reset_index()
         v.to_csv(path, index=False)
         return True
     if _PANDAS and isinstance(v, pd.Series):
@@ -2208,35 +2210,34 @@ fn mk(p: &mut Project, kind: &str, label: &str, x: f32, y: f32, cfg: J) -> FlowN
     FlowNode { id: p.next_id(), kind: kind.into(), label: label.into(), x, y, config }
 }
 
-/// "Customer segments": Sales (sheet) ⋈ Product → line sales and cost → totals per store and
-/// product → margin → k-means on [Total Sales, Margin] → saved as a model table.
+/// "Customer segments": Sales (sheet) ⋈ Product → line sales → totals per store and product →
+/// margin → store names → k-means on [Total Sales, Margin] → saved as a model table.
 pub fn example_segments(p: &mut Project) -> Flow {
     let name = unique_flow_name(p, "Customer segments");
-    let sales = mk(p, "source.sheet", "Sales", 40.0, 60.0, json!({"name": "Sales"}));
-    let product = mk(p, "source.query", "Product", 40.0, 230.0, json!({"name": "Product"}));
-    let store = mk(p, "source.query", "Store", 860.0, 300.0, json!({"name": "Store"}));
-    let join = mk(p, "tf.join", "Join products", 250.0, 130.0, json!({"left_keys": ["ProductID"], "right_keys": ["ProductID"], "kind": "inner"}));
-    let line = mk(p, "tf.formula", "Line sales", 450.0, 60.0, json!({"name": "Line Sales", "expression": "=[Quantity] * [Unit Price] * (1 - [Discount])"}));
-    let cost = mk(p, "tf.formula", "Line cost", 450.0, 200.0, json!({"name": "Line Cost", "expression": "=[Quantity] * [Unit Cost]"}));
+    let x = |i: f32| 40.0 + i * 196.0;
+    let sales = mk(p, "source.sheet", "Sales", x(0.0), 40.0, json!({"name": "Sales"}));
+    let product = mk(p, "source.query", "Product", x(0.0), 170.0, json!({"name": "Product"}));
+    let join = mk(p, "tf.join", "Join products", x(1.0), 104.0, json!({"left_keys": ["ProductID"], "right_keys": ["ProductID"], "kind": "inner"}));
+    let line = mk(p, "tf.formula", "Line sales", x(2.0), 104.0, json!({"name": "Line Sales", "expression": "=[Quantity] * [Unit Price] * (1 - [Discount])"}));
     let group = mk(
         p,
         "tf.group",
         "Sales by store",
-        650.0,
-        130.0,
-        json!({"by": ["StoreID", "Product"], "aggregates": [{"column": "Line Sales", "op": "sum", "name": "Total Sales"}, {"column": "Line Cost", "op": "sum", "name": "Total Cost"}, {"column": "OrderID", "op": "count_distinct", "name": "Orders"}]}),
+        x(3.0),
+        104.0,
+        json!({"by": ["StoreID", "Product"], "aggregates": [{"column": "Line Sales", "op": "sum", "name": "Total Sales"}, {"column": "Quantity", "op": "sum", "name": "Units"}, {"column": "Unit Cost", "op": "first", "name": "Unit Cost"}, {"column": "OrderID", "op": "count_distinct", "name": "Orders"}]}),
     );
-    let margin = mk(p, "tf.formula", "Margin", 860.0, 130.0, json!({"name": "Margin", "expression": "=([Total Sales] - [Total Cost]) / [Total Sales]"}));
-    let stores = mk(p, "tf.join", "Store names", 1060.0, 200.0, json!({"left_keys": ["StoreID"], "right_keys": ["StoreID"], "kind": "left"}));
-    let km = mk(p, "ml.kmeans", "k-Means", 1260.0, 130.0, json!({"columns": ["Total Sales", "Margin"], "k": 4, "normalize": true, "seed": 7, "output": "Segment"}));
-    let stats = mk(p, "stat.stats", "Feature statistics", 1260.0, 300.0, json!({}));
-    let save = mk(p, "out.table", "Save as model table", 1460.0, 130.0, json!({"name": "Store Product Segments"}));
+    let margin = mk(p, "tf.formula", "Margin", x(4.0), 104.0, json!({"name": "Margin", "expression": "=([Total Sales] - [Units] * [Unit Cost]) / [Total Sales]"}));
+    let store = mk(p, "source.query", "Store", x(4.0), 240.0, json!({"name": "Store"}));
+    let stores = mk(p, "tf.join", "Store names", x(5.0), 160.0, json!({"left_keys": ["StoreID"], "right_keys": ["StoreID"], "kind": "left"}));
+    let km = mk(p, "ml.kmeans", "k-Means", x(6.0), 104.0, json!({"columns": ["Total Sales", "Margin"], "k": 4, "normalize": true, "seed": 7, "output": "Segment"}));
+    let stats = mk(p, "stat.stats", "Feature statistics", x(6.0), 240.0, json!({}));
+    let save = mk(p, "out.table", "Save as model table", x(7.0), 104.0, json!({"name": "Store Product Segments"}));
     let links = vec![
         (sales.id, 0, join.id, 0),
         (product.id, 0, join.id, 1),
         (join.id, 0, line.id, 0),
-        (line.id, 0, cost.id, 0),
-        (cost.id, 0, group.id, 0),
+        (line.id, 0, group.id, 0),
         (group.id, 0, margin.id, 0),
         (margin.id, 0, stores.id, 0),
         (store.id, 0, stores.id, 1),
@@ -2244,19 +2245,19 @@ pub fn example_segments(p: &mut Project) -> Flow {
         (stores.id, 0, stats.id, 0),
         (km.id, 0, save.id, 0),
     ];
-    Flow { name, nodes: vec![sales, product, store, join, line, cost, group, margin, stores, km, stats, save], links, description: "Segments store × product pairs by sales and margin with k-means.".into() }
+    Flow { name, nodes: vec![sales, product, join, line, group, margin, store, stores, km, stats, save], links, description: "Segments store × product pairs by sales and margin with k-means.".into() }
 }
 
 /// "Predict order value": a random forest regression of line sales, scored on a test split.
 pub fn example_regression(p: &mut Project) -> Flow {
     let name = unique_flow_name(p, "Predict line sales");
     let sales = mk(p, "source.sheet", "Sales", 40.0, 120.0, json!({"name": "Sales"}));
-    let line = mk(p, "tf.formula", "Line sales", 240.0, 120.0, json!({"name": "Line Sales", "expression": "=[Quantity] * [Unit Price] * (1 - [Discount])"}));
-    let split = mk(p, "ml.split", "Train/test split", 440.0, 120.0, json!({"train": 0.75, "seed": 1}));
-    let forest = mk(p, "ml.forest", "Random forest", 660.0, 40.0, json!({"target": "Line Sales", "features": ["Quantity", "Unit Price", "Discount"], "trees": 30, "max_depth": 12, "task": "regression"}));
-    let linreg = mk(p, "ml.linreg", "Linear regression", 660.0, 220.0, json!({"target": "Line Sales", "features": ["Quantity", "Unit Price", "Discount"]}));
-    let score = mk(p, "ml.score", "Test & Score", 880.0, 40.0, json!({}));
-    let score2 = mk(p, "ml.score", "Test & Score (linear)", 880.0, 220.0, json!({}));
+    let line = mk(p, "tf.formula", "Line sales", 236.0, 120.0, json!({"name": "Line Sales", "expression": "=[Quantity] * [Unit Price] * (1 - [Discount])"}));
+    let split = mk(p, "ml.split", "Train/test split", 432.0, 120.0, json!({"train": 0.75, "seed": 1}));
+    let forest = mk(p, "ml.forest", "Random forest", 628.0, 40.0, json!({"target": "Line Sales", "features": ["Quantity", "Unit Price", "Discount"], "trees": 30, "max_depth": 12, "task": "regression"}));
+    let linreg = mk(p, "ml.linreg", "Linear regression", 628.0, 220.0, json!({"target": "Line Sales", "features": ["Quantity", "Unit Price", "Discount"]}));
+    let score = mk(p, "ml.score", "Test & Score", 824.0, 40.0, json!({}));
+    let score2 = mk(p, "ml.score", "Test & Score (linear)", 824.0, 220.0, json!({}));
     let links = vec![(sales.id, 0, line.id, 0), (line.id, 0, split.id, 0), (split.id, 0, forest.id, 0), (split.id, 0, linreg.id, 0), (forest.id, 0, score.id, 0), (split.id, 1, score.id, 1), (linreg.id, 0, score2.id, 0), (split.id, 1, score2.id, 1)];
     Flow { name, nodes: vec![sales, line, split, forest, linreg, score, score2], links, description: "Compares a random forest and a linear model on held-out orders.".into() }
 }

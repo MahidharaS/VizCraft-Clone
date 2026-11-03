@@ -329,6 +329,9 @@ pub fn sales() -> Project {
     crate::build::sync_model_tables(&mut p);
     p.publish.interactive = true;
     p.publish.include_mobile = true;
+    // A Fabric-style flow: store × product segments with k-means.
+    let seg = crate::flow::example_segments(&mut p);
+    p.flows.push(seg);
     p
 }
 

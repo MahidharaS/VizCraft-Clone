@@ -668,10 +668,10 @@ pub fn start_edit(app: &VizApp, st: &mut SheetUi, r: usize, c: usize, typed: Opt
 fn edit_keys(app: &mut VizApp, st: &mut SheetUi, ui: &mut Ui) {
     let typed = st.edit.as_ref().is_some_and(|e| e.typed);
     let (enter, shift_enter, tab, shift_tab, esc, arrows) = ui.input_mut(|i| {
-        let enter = i.consume_key(Modifiers::NONE, Key::Enter);
         let shift_enter = i.consume_key(Modifiers::SHIFT, Key::Enter);
-        let tab = i.consume_key(Modifiers::NONE, Key::Tab);
+        let enter = i.consume_key(Modifiers::NONE, Key::Enter);
         let shift_tab = i.consume_key(Modifiers::SHIFT, Key::Tab);
+        let tab = i.consume_key(Modifiers::NONE, Key::Tab);
         let esc = i.consume_key(Modifiers::NONE, Key::Escape);
         let mut arrows = (0i64, 0i64);
         if typed {
@@ -727,6 +727,7 @@ fn nav_keys(app: &mut VizApp, st: &mut SheetUi, ui: &mut Ui, vis: &[usize], lay:
             egui::Event::Paste(text) => super::paste_text(app, st, text),
             egui::Event::Text(txt) if !mods.command && !mods.ctrl => {
                 let (r, c) = st.cursor;
+                ui.input_mut(|i| i.events.retain(|e| !matches!(e, egui::Event::Text(_))));
                 start_edit(app, st, r, c, Some(txt.clone()));
                 return;
             }
@@ -795,7 +796,7 @@ fn nav_keys(app: &mut VizApp, st: &mut SheetUi, ui: &mut Ui, vis: &[usize], lay:
     };
     let mut target: Option<((usize, usize), bool)> = None;
     for (k, dr, dc) in [(Key::ArrowDown, 1i64, 0i64), (Key::ArrowUp, -1, 0), (Key::ArrowRight, 0, 1), (Key::ArrowLeft, 0, -1)] {
-        for (m, extend, jump) in [(Modifiers::NONE, false, false), (Modifiers::SHIFT, true, false), (Modifiers::COMMAND, false, true), (Modifiers::COMMAND | Modifiers::SHIFT, true, true)] {
+        for (m, extend, jump) in [(Modifiers::COMMAND | Modifiers::SHIFT, true, true), (Modifiers::COMMAND, false, true), (Modifiers::SHIFT, true, false), (Modifiers::NONE, false, false)] {
             if key(k, m) {
                 let nr = if dr != 0 { if jump { jump_v(dr) } else { next_row(st, r, dr) } } else { r };
                 let nc = if dc != 0 { if jump { jump_h(dc) } else { (c as i64 + dc).max(0) as usize } } else { c };
@@ -803,35 +804,35 @@ fn nav_keys(app: &mut VizApp, st: &mut SheetUi, ui: &mut Ui, vis: &[usize], lay:
             }
         }
     }
-    if key(Key::Tab, Modifiers::NONE) {
-        target = Some(((r, c + 1), false));
-    }
     if key(Key::Tab, Modifiers::SHIFT) {
         target = Some(((r, c.saturating_sub(1)), false));
     }
-    if key(Key::Enter, Modifiers::NONE) {
-        target = Some(((next_row(st, r, 1), c), false));
+    if key(Key::Tab, Modifiers::NONE) {
+        target = Some(((r, c + 1), false));
     }
     if key(Key::Enter, Modifiers::SHIFT) {
         target = Some(((next_row(st, r, -1), c), false));
     }
-    if key(Key::Home, Modifiers::NONE) {
-        target = Some(((r, 0), false));
-    }
-    if key(Key::Home, Modifiers::SHIFT) {
-        target = Some(((r, 0), true));
+    if key(Key::Enter, Modifiers::NONE) {
+        target = Some(((next_row(st, r, 1), c), false));
     }
     if key(Key::Home, Modifiers::COMMAND) {
         target = Some(((if st.freeze_header { 1 } else { 0 }, 0), false));
     }
-    if key(Key::End, Modifiers::NONE) {
-        target = Some(((r, w - 1), false));
+    if key(Key::Home, Modifiers::SHIFT) {
+        target = Some(((r, 0), true));
+    }
+    if key(Key::Home, Modifiers::NONE) {
+        target = Some(((r, 0), false));
+    }
+    if key(Key::End, Modifiers::COMMAND) {
+        target = Some(((vis.last().copied().unwrap_or(last), w - 1), false));
     }
     if key(Key::End, Modifiers::SHIFT) {
         target = Some(((r, w - 1), true));
     }
-    if key(Key::End, Modifiers::COMMAND) {
-        target = Some(((vis.last().copied().unwrap_or(last), w - 1), false));
+    if key(Key::End, Modifiers::NONE) {
+        target = Some(((r, w - 1), false));
     }
     if key(Key::PageDown, Modifiers::NONE) {
         target = Some(((next_row(st, r, page), c), false));
