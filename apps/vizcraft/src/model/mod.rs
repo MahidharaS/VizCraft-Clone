@@ -681,6 +681,7 @@ pub fn dialogs(app: &mut VizApp, ctx: &egui::Context) {
                 "viewas" => view_as(app),
                 "datetable" => mark_date_table(app),
                 "sel-measure" => app.model_ui.sel = Sel::Measure("Margin %".into()),
+                "tmdl-apply" => tmdl_view::demo_apply(app),
                 "sel-column" => app.model_ui.sel = Sel::Column("Sales".into(), "Unit Price".into()),
                 "sel-relationship" => app.model_ui.sel = app.project.model.relationships.first().map(|r| Sel::Relationship(r.id)).unwrap_or_default(),
                 _ => {}

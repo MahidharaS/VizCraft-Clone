@@ -167,6 +167,16 @@ fn revert(app: &mut VizApp) {
     }
 }
 
+/// Demo: edits a measure in the model script and opens the Apply preview.
+pub fn demo_apply(app: &mut VizApp) {
+    ensure(app);
+    if let Some(tab) = app.model_ui.tmdl.tabs.get_mut(0) {
+        tab.text = tab.text.replace("measure Units = SUM(Sales[Quantity])", "measure Units = SUM(Sales[Quantity]) + 0\n\t\tdisplayFolder: Volume").replace("\tmeasure Orders = DISTINCTCOUNT(Sales[OrderID])\n\t\tformatString: #,0\n", "");
+    }
+    app.model_ui.tmdl.active = 0;
+    preview(app);
+}
+
 fn preview(app: &mut VizApp) {
     let active = app.model_ui.tmdl.active;
     let Some(tab) = app.model_ui.tmdl.tabs.get(active) else { return };
