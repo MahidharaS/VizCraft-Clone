@@ -39,6 +39,72 @@ pub fn decode(bytes: &[u8]) -> String {
     }
 }
 
+/// Bytes as text in a code page (`Encoding=`): 65001 UTF-8, 1200 UTF-16LE, 1252 / 28591
+/// Windows Latin-1; anything else (or none) is detected.
+pub fn decode_with(bytes: &[u8], encoding: Option<f64>) -> String {
+    match encoding.map(|e| e as i64) {
+        Some(1252) | Some(28591) | Some(1250) | Some(437) | Some(850) if std::str::from_utf8(bytes).is_err() => {
+            bytes.iter().map(|b| *b as char).collect()
+        }
+        Some(1200) if !bytes.starts_with(&[0xFF, 0xFE]) => {
+            let units: Vec<u16> =
+                bytes.chunks(2).map(|c| c.first().copied().unwrap_or(0) as u16 | ((c.get(1).copied().unwrap_or(0) as u16) << 8)).collect();
+            String::from_utf16_lossy(&units)
+        }
+        _ => decode(bytes),
+    }
+}
+
+fn hex(b: &[u8]) -> String {
+    const H: &[u8; 16] = b"0123456789abcdef";
+    let mut s = String::with_capacity(b.len() * 2);
+    for x in b {
+        s.push(H[(x >> 4) as usize] as char);
+        s.push(H[(x & 15) as usize] as char);
+    }
+    s
+}
+
+/// Percent-encodes a URL query component.
+pub fn url_encode(s: &str) -> String {
+    let mut out = String::new();
+    for b in s.bytes() {
+        if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
+/// `Web.Contents(url, [RelativePath, Query, Headers])` as one string for the host: the URL with
+/// the path and query applied, then `\u{1}Name: value` per header.
+fn web_url(url: &str, opts: &Value) -> String {
+    let mut u = url.to_string();
+    let mut headers = String::new();
+    if let Value::Record(r) = opts {
+        if let Some(Value::Text(p)) = r.get("RelativePath") {
+            if !u.ends_with('/') && !p.starts_with('/') {
+                u.push('/');
+            }
+            u.push_str(p);
+        }
+        if let Some(Value::Record(q)) = r.get("Query") {
+            for (k, v) in q.names.iter().zip(q.values.iter()) {
+                u.push(if u.contains('?') { '&' } else { '?' });
+                u.push_str(&format!("{}={}", url_encode(k), url_encode(&v.display())));
+            }
+        }
+        if let Some(Value::Record(h)) = r.get("Headers") {
+            for (k, v) in h.names.iter().zip(h.values.iter()) {
+                headers.push_str(&format!("\u{1}{k}: {}", v.display()));
+            }
+        }
+    }
+    u + &headers
+}
+
 /// Parses delimited text into rows of text fields (quotes, doubled quotes, newlines in quotes).
 pub fn parse_csv(text: &str, delim: char, quotes: bool) -> Vec<Vec<String>> {
     let mut rows = Vec::new();
@@ -129,10 +195,18 @@ pub fn call(ev: &Evaluator, name: &str, a: &[Value]) -> Option<Result<Value>> {
                 match v {
                     Value::Text(t) => texts.push(t.to_string()),
                     Value::Number(n) => texts.push(n.to_string()),
+                    // Parquet is binary: hand it over intact (hex), not as text.
+                    Value::Binary(b) if name == "Parquet.Document" => texts.push(format!("\u{1}hex:{}", hex(b))),
                     Value::Binary(b) => texts.push(decode(b)),
                     Value::Record(r) => {
-                        if let Some(Value::Text(q)) = r.get("Query") {
-                            query = Some(q.to_string());
+                        for (k, v) in r.names.iter().zip(r.values.iter()) {
+                            match (k.as_str(), v) {
+                                ("Query", Value::Text(q)) => query = Some(q.to_string()),
+                                (_, Value::Text(t)) => texts.push(format!("\u{1}opt:{k}={t}")),
+                                (_, Value::Number(n)) => texts.push(format!("\u{1}opt:{k}={n}")),
+                                (_, Value::Logical(b)) => texts.push(format!("\u{1}opt:{k}={b}")),
+                                _ => {}
+                            }
                         }
                     }
                     _ => {}
@@ -142,13 +216,20 @@ pub fn call(ev: &Evaluator, name: &str, a: &[Value]) -> Option<Result<Value>> {
         })(),
         "Excel.CurrentWorkbook" => ev.host.current_workbook().map(Value::table),
         "File.Contents" => text_arg(a, 0, name).and_then(|p| ev.host.file_contents(&p)).map(|b| Value::Binary(Rc::new(b))),
-        "Web.Contents" => text_arg(a, 0, name).and_then(|u| ev.host.web_contents(&u)).map(|b| Value::Binary(Rc::new(b))),
+        "Web.Contents" => (|| {
+            let url = web_url(&text_arg(a, 0, name)?, arg(a, 1));
+            ev.host.web_contents(&url).map(|b| Value::Binary(Rc::new(b)))
+        })(),
         "Folder.Files" | "Folder.Contents" => text_arg(a, 0, name).and_then(|p| ev.host.folder_files(&p)).map(Value::table),
         "Excel.Workbook" => binary(arg(a, 0)).and_then(|b| ev.host.excel_workbook(&b, matches!(arg(a, 1), Value::Logical(true)))).map(Value::table),
         "Csv.Document" => (|| {
+            let encoding = match arg(a, 1) {
+                Value::Record(r) => r.get("Encoding").and_then(Value::as_number),
+                _ => arg(a, 3).as_number(),
+            };
             let text = match arg(a, 0) {
                 Value::Text(t) => t.to_string(),
-                v => decode(&binary(v)?),
+                v => decode_with(&binary(v)?, encoding),
             };
             let (mut delim, mut quotes, mut cols) = (None, true, None);
             match arg(a, 1) {
