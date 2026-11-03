@@ -129,7 +129,7 @@ fn load(path: &str) -> Result<(Project, Built), String> {
     }
     build::sync_model_tables(&mut p);
     let params = p.model.parameters.iter().map(|x| (x.name.clone(), x.current.clone())).collect();
-    let host = vizcraft_connectors::DesktopHost::default();
+    let host: vizcraft_connectors::DesktopHost = Default::default();
     let built = build::build(&p, &host, &params);
     for (obj, e) in &built.errors {
         eprintln!("warning: {obj}: {e}");

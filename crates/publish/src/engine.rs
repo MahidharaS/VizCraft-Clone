@@ -426,7 +426,7 @@ impl Engine {
             "down" | "next" => {
                 if d.level + 1 < levels {
                     d.level += 1;
-                    d.path.truncate(0);
+                    d.path.clear();
                     d.expand_to = 0;
                 }
             }
