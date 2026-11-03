@@ -180,10 +180,30 @@ fn cond_dax(r: &str, c: &Condition) -> String {
     }
 }
 
+/// Overrides "today" (serial date bits; 0 = not set). The web viewer sets it from JavaScript:
+/// `wasm32-unknown-unknown` has no clock.
+static TODAY_OVERRIDE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Sets the date [`today_serial`] returns (`None` = the system clock).
+pub fn set_today_serial(serial: Option<f64>) {
+    TODAY_OVERRIDE.store(serial.map(f64::to_bits).unwrap_or(0), std::sync::atomic::Ordering::Relaxed);
+}
+
 /// Today as a serial date.
 pub fn today_serial() -> f64 {
-    let today = chrono::Local::now().date_naive();
-    vizcraft_datamodel::dates::to_serial(today).unwrap_or(45000.0)
+    let bits = TODAY_OVERRIDE.load(std::sync::atomic::Ordering::Relaxed);
+    if bits != 0 {
+        return f64::from_bits(bits);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let today = chrono::Local::now().date_naive();
+        vizcraft_datamodel::dates::to_serial(today).unwrap_or(45000.0)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        45000.0
+    }
 }
 
 fn relative_range(mode: &str, n: i64, unit: &str, include_today: bool) -> (f64, f64) {

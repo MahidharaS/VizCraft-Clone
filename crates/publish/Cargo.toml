@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "VizCraft publishing: static web reports (desktop + mobile layouts), single-file HTML, VizCraft Service and GitHub Pages"
+build = "build.rs"
 
 [lints]
 workspace = true
@@ -12,3 +13,10 @@ workspace = true
 vizcraft-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+zip = { workspace = true }
+ureq = { workspace = true }
+
+[dev-dependencies]
+vizcraft-query = { workspace = true }
