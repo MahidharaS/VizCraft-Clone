@@ -2408,6 +2408,19 @@ mod tests {
     }
 
     #[test]
+    fn flow_outputs_load_into_the_model() {
+        let mut p = crate::sample::sales();
+        let f = p.flows.iter().find(|f| f.name == "Customer segments").cloned().unwrap();
+        let save = f.nodes.iter().find(|n| n.kind == "out.table").unwrap();
+        p.model.tables.push(crate::doc::ModelTable { name: "Segments".into(), source: TableSource::Flow(spec(&f.name, save.id)), ..Default::default() });
+        crate::build::sync_model_tables(&mut p);
+        let built = crate::build::build(&p, &NoHost, &BTreeMap::new());
+        assert!(built.errors.iter().all(|e| e.0 != "Segments"), "{:?}", built.errors);
+        assert_eq!(built.tables.get("Segments").unwrap().rows.len(), 96);
+        assert!(built.model.table("Segments").is_some());
+    }
+
+    #[test]
     fn classification_pipeline() {
         let mut rng = ml::Rng::new(5);
         let rows: Vec<Vec<Scalar>> = (0..200)

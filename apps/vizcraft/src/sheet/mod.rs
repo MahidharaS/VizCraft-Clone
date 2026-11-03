@@ -978,7 +978,7 @@ fn find_dialog(app: &mut VizApp, st: &mut SheetUi, ctx: &egui::Context) {
     }
     let mut open = true;
     let mut action = None;
-    egui::Window::new(if st.find.replace_mode { "Find and replace" } else { "Find" }).open(&mut open).collapsible(false).resizable(false).default_pos(ctx.content_rect().right_top() + vec2(-380.0, 170.0)).show(ctx, |ui| {
+    egui::Window::new(if st.find.replace_mode { "Find and replace" } else { "Find" }).open(&mut open).collapsible(false).resizable(false).default_pos(ctx.content_rect().right_top() + vec2(-400.0, 260.0)).show(ctx, |ui| {
         ui.horizontal(|ui| {
             ui.selectable_value(&mut st.find.replace_mode, false, "Find");
             ui.selectable_value(&mut st.find.replace_mode, true, "Replace");

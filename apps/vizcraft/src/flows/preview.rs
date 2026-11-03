@@ -27,7 +27,7 @@ pub fn cell_text(v: &Scalar, ty: ColType) -> String {
         Scalar::Num(n) if ty.is_temporal() => vizcraft_core::numfmt::format_date(*n, if ty == ColType::Date || n.fract() == 0.0 { "yyyy-mm-dd" } else { "yyyy-mm-dd hh:mm" }),
         Scalar::Num(n) => {
             if n.fract() == 0.0 && n.abs() < 1e15 {
-                vizcraft_core::numfmt::format(*n, if ty == ColType::Integer && n.abs() >= 10000.0 { "#,0" } else { "0" })
+                vizcraft_core::numfmt::general(*n)
             } else if n.abs() >= 1000.0 {
                 vizcraft_core::numfmt::format(*n, "#,0.##")
             } else {
