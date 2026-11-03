@@ -12,6 +12,8 @@ use crate::store::RowSet;
 use crate::value::{Key, Value, compare, sort_order};
 use crate::{Error, Result};
 
+mod ext;
+
 /// How deep measures may call measures.
 pub const MAX_MEASURE_DEPTH: usize = 64;
 /// Evaluation steps one call may take before it is stopped (bounds runaway iterations).
@@ -136,8 +138,32 @@ fn arg<'a>(args: &'a [Expr], i: usize, f: &str) -> Result<&'a Expr> {
     args.get(i).ok_or_else(|| Error::Eval(format!("{f} needs at least {} argument(s)", i + 1)))
 }
 
-const TIME_TABLE_FNS: &[&str] =
-    &["DATESYTD", "DATESQTD", "DATESMTD", "SAMEPERIODLASTYEAR", "DATEADD", "PREVIOUSYEAR", "PREVIOUSQUARTER", "PREVIOUSMONTH", "DATESBETWEEN"];
+const TIME_TABLE_FNS: &[&str] = &[
+    "DATESYTD",
+    "DATESQTD",
+    "DATESMTD",
+    "SAMEPERIODLASTYEAR",
+    "DATEADD",
+    "PREVIOUSYEAR",
+    "PREVIOUSQUARTER",
+    "PREVIOUSMONTH",
+    "DATESBETWEEN",
+    "DATESINPERIOD",
+    "PARALLELPERIOD",
+    "NEXTDAY",
+    "NEXTMONTH",
+    "NEXTQUARTER",
+    "NEXTYEAR",
+    "PREVIOUSDAY",
+    "FIRSTDATE",
+    "LASTDATE",
+    "STARTOFMONTH",
+    "STARTOFQUARTER",
+    "STARTOFYEAR",
+    "ENDOFMONTH",
+    "ENDOFQUARTER",
+    "ENDOFYEAR",
+];
 
 pub struct Evaluator<'m> {
     pub m: &'m Model,
@@ -379,6 +405,9 @@ impl<'m> Evaluator<'m> {
     fn call(&self, name: &str, args: &[Expr], ctx: &Ctx, env: &Env) -> Result<Val> {
         let s = |v: Result<Value>| v.map(Val::Scalar);
         let t = |v: Result<TableVal>| v.map(|t| Val::Table(Rc::new(t)));
+        if let Some(r) = self.call_ext(name, args, ctx, env) {
+            return r;
+        }
         match name {
             "MIN" | "MAX" if args.len() == 2 => s(self.pure(name, args, ctx, env)),
             "SUM"
@@ -504,6 +533,8 @@ impl<'m> Evaluator<'m> {
                     self.remove_filters(&mut new, xs, env)?
                 }
                 Expr::Call(f, xs) if f == "ALLEXCEPT" => self.all_except(&mut new, xs, env)?,
+                // Relationship direction changes aren't modelled: CROSSFILTER keeps the model's.
+                Expr::Call(f, _) if f == "CROSSFILTER" => {}
                 Expr::Call(f, xs) if f == "USERELATIONSHIP" => {
                     let a = self.col_arg(arg(xs, 0, f)?, env, f)?;
                     let b = self.col_arg(arg(xs, 1, f)?, env, f)?;

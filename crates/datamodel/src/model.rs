@@ -223,8 +223,19 @@ impl Model {
 
     /// Runs a DAX query (`EVALUATE …`), or a bare table expression.
     pub fn query(&self, text: &str) -> Result<QueryResult> {
-        let q = if text.trim_start().get(..8).is_some_and(|s| s.eq_ignore_ascii_case("EVALUATE") || s.eq_ignore_ascii_case("DEFINE M"))
-            || text.trim_start().get(..6).is_some_and(|s| s.eq_ignore_ascii_case("DEFINE"))
+        // Leading comments don't count when telling a query from a table expression.
+        let mut head = text.trim_start();
+        loop {
+            if head.starts_with("//") || head.starts_with("--") {
+                head = head.split_once('\n').map(|(_, r)| r).unwrap_or("").trim_start();
+            } else if let Some(r) = head.strip_prefix("/*") {
+                head = r.split_once("*/").map(|(_, r)| r).unwrap_or("").trim_start();
+            } else {
+                break;
+            }
+        }
+        let q = if head.get(..8).is_some_and(|s| s.eq_ignore_ascii_case("EVALUATE") || s.eq_ignore_ascii_case("DEFINE M"))
+            || head.get(..6).is_some_and(|s| s.eq_ignore_ascii_case("DEFINE"))
         {
             parse_query(text)?
         } else {

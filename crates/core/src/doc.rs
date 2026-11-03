@@ -162,6 +162,8 @@ pub struct ModelTable {
     /// "Import" or "DirectQuery" (DirectQuery is re-evaluated on each refresh).
     pub storage_mode: String,
     pub is_date_table: bool,
+    /// The date column of a table marked as a date table.
+    pub date_column: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
