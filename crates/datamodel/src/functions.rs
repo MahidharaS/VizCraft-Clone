@@ -158,6 +158,23 @@ fn text(name: &str, vals: &[Value]) -> Result<Value> {
             let d = s(0);
             vals.iter().skip(1).map(Value::to_text).collect::<Vec<_>>().join(&d)
         }
+        "PATHITEM" | "PATHITEMREVERSE" => {
+            let path = s(0);
+            let items: Vec<&str> = path.split('|').collect();
+            let k = n(vals, 1)?;
+            if k < 1.0 {
+                return Ok(Value::Blank);
+            }
+            let i = k as usize - 1;
+            let item = if name == "PATHITEM" { items.get(i) } else { items.len().checked_sub(i + 1).and_then(|j| items.get(j)) };
+            match item {
+                Some(x) if vals.len() > 2 && n(vals, 2)? == 1.0 => return Ok(x.trim().parse::<f64>().map(num).unwrap_or(Value::Blank)),
+                Some(x) => x.to_string(),
+                None => return Ok(Value::Blank),
+            }
+        }
+        "PATHLENGTH" => return Ok(num(if s(0).is_empty() { 0.0 } else { s(0).split('|').count() as f64 })),
+        "PATHCONTAINS" => return Ok(Value::Bool(s(0).split('|').any(|x| x.eq_ignore_ascii_case(&s(1))))),
         "EXACT" => return Ok(Value::Bool(s(0) == s(1))),
         "CONTAINSSTRINGEXACT" => return Ok(Value::Bool(s(0).contains(&s(1)))),
         "REPLACE" => {
@@ -187,7 +204,13 @@ fn text(name: &str, vals: &[Value]) -> Result<Value> {
 }
 
 fn date(name: &str, vals: &[Value]) -> Result<Value> {
-    let day = |i: usize| -> Result<chrono::NaiveDate> { dates::to_date(n(vals, i)?).ok_or_else(|| Error::Eval(format!("{name}: not a date"))) };
+    let serial = |i: usize| -> Result<f64> {
+        match v(vals, i) {
+            Value::Text(t) => t.trim().parse::<f64>().ok().or_else(|| parse_date_text(t)).ok_or_else(|| Error::Eval(format!("{name}: \"{t}\" is not a date"))),
+            _ => n(vals, i),
+        }
+    };
+    let day = |i: usize| -> Result<chrono::NaiveDate> { dates::to_date(serial(i)?).ok_or_else(|| Error::Eval(format!("{name}: not a date"))) };
     let r = match name {
         "DATE" => dates::ymd(n(vals, 0)? as i32, n(vals, 1)?.clamp(1.0, 12.0) as u32, n(vals, 2)?.clamp(1.0, 31.0) as u32)
             .ok_or_else(|| Error::Eval("DATE: not a valid date".into()))?,
