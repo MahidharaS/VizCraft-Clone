@@ -266,6 +266,9 @@ pub fn cards(kind: &str) -> Vec<Card> {
             out.push(data_colors());
             out.push(labels());
             out.push(plot());
+            if kind == "histogram" {
+                out.push(Card { name: "Bins", tab: "Visual", props: vec![n("bins.count", "Number of bins", 12.0, 2.0, 100.0)] });
+            }
             if kind == "waterfall" {
                 out.push(Card {
                     name: "Sentiment colors",
@@ -353,6 +356,7 @@ pub fn cards(kind: &str) -> Vec<Card> {
                     b("slicer.selectAll", "Show \"Select all\"", true),
                     b("slicer.search", "Search", true),
                     b("slicer.header", "Slicer header", true),
+                    b("slicer.open", "Dropdown open", false),
                 ],
             });
             out.push(text_card("Values", "values"));

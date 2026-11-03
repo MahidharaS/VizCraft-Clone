@@ -1,4 +1,5 @@
-//! Shared chart helpers and simple renderers.
+//! Shared chart helpers: number formatting, colours, selection dimming, tooltips, label
+//! templates, curve interpolation, markers and scene composition.
 
 use super::RenderOpts;
 use crate::color::Color;
@@ -9,30 +10,175 @@ use crate::vquery::VisualData;
 
 /// A "nice" axis: ticks covering [lo, hi].
 pub fn nice_ticks(lo: f64, hi: f64, target: usize) -> Vec<f64> {
-    let (lo, hi) = if lo == hi { (lo - 1.0, hi + 1.0) } else { (lo.min(hi), lo.max(hi)) };
-    let span = hi - lo;
-    let raw = span / target.max(1) as f64;
-    let mag = 10f64.powf(raw.log10().floor());
-    let norm = raw / mag;
-    let step = mag * if norm < 1.5 { 1.0 } else if norm < 3.0 { 2.0 } else if norm < 7.0 { 5.0 } else { 10.0 };
+    if !lo.is_finite() || !hi.is_finite() {
+        return vec![0.0, 1.0];
+    }
+    let (lo, hi) = if (hi - lo).abs() < 1e-12 {
+        if lo == 0.0 { (0.0, 1.0) } else { (lo - lo.abs() * 0.5, hi + hi.abs() * 0.5) }
+    } else {
+        (lo.min(hi), lo.max(hi))
+    };
+    let step = nice_step((hi - lo) / target.max(1) as f64);
     let start = (lo / step).floor() * step;
     let mut out = Vec::new();
-    let mut v = start;
-    while v <= hi + step * 0.5 && out.len() < 50 {
-        out.push((v / step).round() * step);
-        v += step;
+    let mut i = 0;
+    loop {
+        let v = start + step * i as f64;
+        let v = (v / step).round() * step;
+        out.push(if v.abs() < step * 1e-9 { 0.0 } else { v });
+        if v >= hi - step * 1e-9 || out.len() >= 60 {
+            break;
+        }
+        i += 1;
     }
     out
 }
 
+pub fn nice_step(raw: f64) -> f64 {
+    if !(raw.is_finite() && raw > 0.0) {
+        return 1.0;
+    }
+    let mag = 10f64.powf(raw.log10().floor());
+    let norm = raw / mag;
+    mag * if norm <= 1.0 {
+        1.0
+    } else if norm <= 2.0 {
+        2.0
+    } else if norm <= 2.5 {
+        2.5
+    } else if norm <= 5.0 {
+        5.0
+    } else {
+        10.0
+    }
+}
+
+/// Compact number with display units ("Auto" picks K/M/bn).
 pub fn short_num(v: f64, units: &str) -> String {
-    match units {
-        "None" => crate::numfmt::format(v, "#,0.##"),
-        "Thousands" => format!("{}K", crate::numfmt::format(v / 1e3, "#,0.#")),
-        "Millions" => format!("{}M", crate::numfmt::format(v / 1e6, "#,0.#")),
-        "Billions" => format!("{}bn", crate::numfmt::format(v / 1e9, "#,0.#")),
-        "Trillions" => format!("{}T", crate::numfmt::format(v / 1e12, "#,0.#")),
-        _ => crate::numfmt::compact(v, if v.abs() >= 1000.0 { 1 } else { 2 }).replace(".0K", "K").replace(".0M", "M"),
+    if !v.is_finite() {
+        return String::new();
+    }
+    let trim = |s: String| -> String {
+        if s.contains('.') {
+            let t = s.trim_end_matches('0').trim_end_matches('.');
+            t.to_string()
+        } else {
+            s
+        }
+    };
+    let (div, suf) = match units {
+        "None" => return crate::numfmt::format(v, if v.fract().abs() > 1e-9 && v.abs() < 100.0 { "#,0.##" } else { "#,0" }),
+        "Thousands" => (1e3, "K"),
+        "Millions" => (1e6, "M"),
+        "Billions" => (1e9, "bn"),
+        "Trillions" => (1e12, "T"),
+        _ => {
+            let a = v.abs();
+            if a >= 1e12 {
+                (1e12, "T")
+            } else if a >= 1e9 {
+                (1e9, "bn")
+            } else if a >= 1e6 {
+                (1e6, "M")
+            } else if a >= 1e3 {
+                (1e3, "K")
+            } else {
+                (1.0, "")
+            }
+        }
+    };
+    let x = v / div;
+    let s = if x.abs() >= 100.0 { format!("{x:.0}") } else if x.abs() >= 10.0 { trim(format!("{x:.1}")) } else { trim(format!("{x:.2}")) };
+    format!("{s}{suf}")
+}
+
+/// How values of a column are written on axes and labels.
+#[derive(Clone, Debug, Default)]
+pub struct ValueFmt {
+    /// The column's format string (`$#,0`, `0.0%`).
+    pub format: String,
+    /// Display units: "Auto", "None", "Thousands", …
+    pub units: String,
+    /// Decimal places (-1 = automatic).
+    pub decimals: i32,
+    /// An explicit format string from the format pane (wins).
+    pub explicit: String,
+}
+
+impl ValueFmt {
+    pub fn new(format: &str) -> ValueFmt {
+        ValueFmt { format: format.to_string(), units: "Auto".into(), decimals: -1, explicit: String::new() }
+    }
+    pub fn of_col(d: &VisualData, col: usize) -> ValueFmt {
+        ValueFmt::new(&d.cols.get(col).map(|c| c.format.clone()).unwrap_or_default())
+    }
+    pub fn with_props(mut self, o: &RenderOpts, prefix: &str) -> ValueFmt {
+        self.units = o.props.text(&format!("{prefix}.units"), "Auto");
+        self.decimals = o.props.num(&format!("{prefix}.decimals"), -1.0) as i32;
+        self.explicit = o.props.text(&format!("{prefix}.format"), "");
+        self
+    }
+    /// Picks one display unit for a set of values (so labels read consistently).
+    pub fn uniform(mut self, max_abs: f64) -> ValueFmt {
+        if self.units == "Auto" && !self.is_percent() {
+            self.units = if max_abs >= 1e9 {
+                "Billions"
+            } else if max_abs >= 1e6 {
+                "Millions"
+            } else if max_abs >= 1e4 {
+                "Thousands"
+            } else {
+                "None"
+            }
+            .into();
+        }
+        self
+    }
+    pub fn is_percent(&self) -> bool {
+        self.format.contains('%')
+    }
+    fn currency(&self) -> &'static str {
+        for (sym, s) in [("$", "$"), ("€", "€"), ("£", "£"), ("₹", "₹"), ("¥", "¥")] {
+            if self.format.contains(sym) {
+                return s;
+            }
+        }
+        ""
+    }
+    /// Full-precision text (tooltips, tables).
+    pub fn full(&self, v: f64) -> String {
+        if !v.is_finite() {
+            return String::new();
+        }
+        if !self.explicit.is_empty() {
+            return crate::numfmt::format(v, &self.explicit);
+        }
+        crate::vquery::format_value(v, &self.format, crate::build::ColType::Number)
+    }
+    /// Compact text for labels and axis ticks.
+    pub fn short(&self, v: f64) -> String {
+        if !v.is_finite() {
+            return String::new();
+        }
+        if !self.explicit.is_empty() {
+            return crate::numfmt::format(v, &self.explicit);
+        }
+        if self.is_percent() {
+            let dec = if self.decimals >= 0 { self.decimals as usize } else if (v * 100.0).fract().abs() < 1e-6 || v.abs() >= 0.1 { 0 } else { 1 };
+            let dec = if self.decimals < 0 && (v * 100.0 - (v * 100.0).round()).abs() > 0.05 { dec.max(1) } else { dec };
+            return format!("{:.*}%", dec, v * 100.0);
+        }
+        let cur = self.currency();
+        let neg = v < 0.0;
+        let a = v.abs();
+        let body = if self.decimals >= 0 && (self.units == "None" || self.units == "Auto" && a < 1e4) {
+            crate::numfmt::format(a, &format!("#,0{}", if self.decimals > 0 { format!(".{}", "0".repeat(self.decimals as usize)) } else { String::new() }))
+        } else if self.units == "Auto" && a < 1e4 {
+            if a.fract().abs() > 1e-9 && a < 100.0 { crate::numfmt::format(a, "#,0.##") } else { crate::numfmt::format(a, "#,0") }
+        } else {
+            short_num(a, &self.units)
+        };
+        format!("{}{cur}{body}", if neg { "-" } else { "" })
     }
 }
 
@@ -49,8 +195,14 @@ pub fn series_color(o: &RenderOpts, i: usize, key: &str) -> Color {
     o.theme.series_color(i)
 }
 
+/// Applies the "dataColors.transparency" property.
+pub fn data_alpha(o: &RenderOpts, c: Color) -> Color {
+    let t = o.props.f32("dataColors.transparency", 0.0).clamp(0.0, 100.0);
+    if t > 0.0 { c.with_alpha(((100.0 - t) / 100.0 * c.a as f32) as u8) } else { c }
+}
+
 fn is_selected(o: &RenderOpts, point: &[(FieldRef, Scalar)]) -> bool {
-    o.selected.iter().any(|p| p.as_slice() == point)
+    o.selected.iter().any(|p| p.as_slice() == point || (!p.is_empty() && p.iter().all(|x| point.contains(x))))
 }
 
 /// Dimmed when something else is selected in this visual.
@@ -59,187 +211,257 @@ pub fn dim(o: &RenderOpts, point: &[(FieldRef, Scalar)]) -> bool {
 }
 
 pub fn tooltip(d: &VisualData, row: usize) -> Vec<(String, String)> {
-    d.cols.iter().enumerate().map(|(i, c)| (c.label.clone(), d.text(row, i))).collect()
+    d.cols.iter().enumerate().filter(|(_, c)| c.role != "__internal").map(|(i, c)| (c.label.clone(), d.text(row, i))).collect()
 }
 
-/// Minimal renderers used until a kind has its dedicated renderer.
-pub fn render_basic(spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
-    match spec.kind {
-        VisualKind::Card | VisualKind::Kpi | VisualKind::Gauge => card(d, o),
-        VisualKind::Table | VisualKind::Matrix | VisualKind::MultiRowCard => table(d, o),
-        VisualKind::Slicer => slicer(spec, d, o),
-        VisualKind::Pie | VisualKind::Donut => pie(spec, d, o),
-        _ => columns(spec, d, o),
+/// Identity roles used for cross-filtering from cartesian charts.
+pub const POINT_ROLES: &[&str] = &["axis", "legend", "small", "details", "rows", "columns", "location", "breakdown", "source", "destination"];
+/// Roles fx data colours are keyed by (see `fx::resolve_point_colors`).
+pub const COLOR_ROLES: &[&str] = &["axis", "legend", "details", "rows", "location"];
+
+pub fn hit(d: &VisualData, row: usize, roles: &[&str]) -> Hit {
+    Hit { point: d.identity(row, roles), tooltip: tooltip(d, row) }
+}
+
+/// The per-point colour override key of a row.
+pub fn color_key(d: &VisualData, row: usize) -> String {
+    crate::fx::point_key(&d.identity(row, COLOR_ROLES))
+}
+
+/// The value text of the highlight data (cross-highlight) for a cell.
+pub fn hl_num(d: &VisualData, row: usize, col: usize) -> Option<f64> {
+    d.highlight.as_ref()?.get(row)?.get(col)?.as_f64()
+}
+
+/// Expands a data-label template: `{value} {category} {series} {percent}`.
+pub fn label_template(o: &RenderOpts, value: &str, category: &str, series: &str, percent: &str) -> String {
+    let t = o.props.text("labels.template", "");
+    if t.trim().is_empty() {
+        return value.to_string();
+    }
+    t.replace("{value}", value).replace("{category}", category).replace("{series}", series).replace("{percent}", percent)
+}
+
+/// Gridline stroke from the format pane.
+pub fn grid_line(o: &RenderOpts) -> Line {
+    let c = grid_color(o);
+    Line::from_style(o.props.f32("grid.width", 1.0), c, &o.props.text("grid.style", "solid"))
+}
+
+/// The gridline colour: the format pane's, except that its light default gives way to a
+/// theme-derived colour on dark themes.
+pub fn grid_color(o: &RenderOpts) -> Color {
+    match o.props.color_opt("grid.color") {
+        Some(c) if !(c == Color::rgb(0xE6, 0xE8, 0xEC) && o.theme.visual_background.luminance() < 0.4) => c,
+        _ => grid_default(o),
     }
 }
 
-fn card(d: &VisualData, o: &RenderOpts) -> Scene {
-    let mut s = Scene::new(o.width, o.height);
-    let Some(vi) = d.values().first().copied() else { return super::message(o, "Add a value") };
-    let text = d.text(0, vi);
-    let size = o.props.f32("callout.size", 36.0).min(o.height * 0.6);
-    s.text_bold(o.width / 2.0, o.height / 2.0 - 6.0, text, size, o.props.color("callout.color", o.theme.foreground), Align::Center, Align::Center);
-    if o.props.bool("category.show", true) {
-        let label = d.cols.get(vi).map(|c| c.label.clone()).unwrap_or_default();
-        s.text(o.width / 2.0, o.height / 2.0 + size * 0.55, label, o.props.f32("category.size", 11.0), o.theme.foreground_muted, Align::Center, Align::Start);
-    }
-    s
+pub fn grid_default(o: &RenderOpts) -> Color {
+    if o.theme.visual_background.luminance() < 0.4 { o.theme.visual_border } else { Color::rgb(0xE9, 0xEC, 0xF0) }
 }
 
-fn table(d: &VisualData, o: &RenderOpts) -> Scene {
-    let mut s = Scene::new(o.width, o.height);
-    let size = o.props.f32("values.size", 10.0);
-    let row_h = size * 2.0;
-    let n = d.cols.len().max(1);
-    let cw = o.width / n as f32;
-    let hb = o.props.color("headers.background", o.theme.visual_background);
-    s.rect(Rect::new(0.0, 0.0, o.width, row_h), hb);
-    for (i, c) in d.cols.iter().enumerate() {
-        s.text_bold(i as f32 * cw + 4.0, row_h / 2.0, ellipsize(&c.label, size, cw - 8.0), size, o.theme.foreground, Align::Start, Align::Center);
-    }
-    s.line((0.0, row_h), (o.width, row_h), Line::solid(1.0, o.theme.foreground_muted));
-    for r in 0..d.rows.len() {
-        let y = row_h * (r as f32 + 1.0);
-        if y + row_h > o.height {
-            break;
-        }
-        if r % 2 == 1 && o.props.bool("values.banded", true) {
-            s.rect(Rect::new(0.0, y, o.width, row_h), o.theme.background.with_alpha(160));
-        }
-        for (i, c) in d.cols.iter().enumerate() {
-            let t = d.text(r, i);
-            let (x, h) = if c.is_value { (i as f32 * cw + cw - 4.0, Align::End) } else { (i as f32 * cw + 4.0, Align::Start) };
-            s.text(x, y + row_h / 2.0, ellipsize(&t, size, cw - 8.0), size, o.theme.foreground, h, Align::Center);
-        }
-        let point = d.identity(r, &[]);
-        let dimmed = dim(o, &point);
-        s.push_hit(Shape::Rect { rect: Rect::new(0.0, y, o.width, row_h), fill: None, stroke: None, radius: 0.0 }, Hit { point, tooltip: tooltip(d, r) }, dimmed);
-    }
-    s
+/// Muted axis label colour.
+pub fn axis_text(o: &RenderOpts, prefix: &str) -> Color {
+    o.props.color_opt(&format!("{prefix}.color")).unwrap_or(o.theme.foreground_muted)
 }
 
-fn slicer(spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
-    let mut s = Scene::new(o.width, o.height);
-    let size = o.props.f32("values.size", 11.0);
-    let row_h = size * 2.0;
-    for r in 0..d.rows.len() {
-        let y = r as f32 * row_h;
-        if y + row_h > o.height {
-            break;
-        }
-        let v = d.cell(r, 0).clone();
-        let on = spec.selection.iter().any(|x| x.key() == v.key());
-        s.push(Shape::Rect { rect: Rect::new(2.0, y + row_h / 2.0 - 6.0, 12.0, 12.0), fill: if on { Some(o.theme.accent) } else { None }, stroke: Some(Line::solid(1.0, o.theme.foreground_muted)), radius: 2.0 });
-        s.text(20.0, y + row_h / 2.0, d.text(r, 0), size, o.theme.foreground, Align::Start, Align::Center);
-        s.actions.push((Rect::new(0.0, y, o.width, row_h), format!("slicer:{}", serde_json::to_string(&v).unwrap_or_default())));
+/// Text on top of a coloured mark.
+pub fn label_color(o: &RenderOpts, on: Option<Color>) -> Color {
+    if let Some(c) = o.props.color_opt("labels.color") {
+        return c;
     }
-    s
+    match on {
+        Some(c) => c.contrast_text(),
+        None => o.theme.foreground,
+    }
 }
 
-fn pie(spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
-    let mut s = Scene::new(o.width, o.height);
-    let Some(vi) = d.values().first().copied() else { return super::message(o, "Add values") };
-    let total: f64 = d.rows.iter().filter_map(|r| r.get(vi)?.as_f64()).filter(|v| *v > 0.0).sum();
-    if total <= 0.0 {
-        return super::message(o, "No data");
+/// Catmull-Rom smoothing (clamped so curves don't overshoot much), sampled into a polyline.
+pub fn smooth(pts: &[(f32, f32)]) -> Vec<(f32, f32)> {
+    if pts.len() < 3 {
+        return pts.to_vec();
     }
-    let r = (o.width.min(o.height) / 2.0 - 16.0).max(10.0);
-    let (cx, cy) = (o.width / 2.0, o.height / 2.0);
-    let inner = if spec.kind == VisualKind::Donut { r * o.props.f32("donut.inner", 55.0) / 100.0 } else { 0.0 };
-    let mut a = 0.0f32;
-    for row in 0..d.rows.len() {
-        let v = d.num(row, vi).unwrap_or(0.0).max(0.0);
-        let sweep = (v / total) as f32 * std::f32::consts::TAU;
-        let point = d.identity(row, &[]);
-        let key = crate::fx::point_key(&point);
-        let color = series_color(o, row, &key);
-        let dimmed = dim(o, &point);
-        s.push_hit(Shape::Arc { cx, cy, r_inner: inner, r_outer: r, start: a, end: a + sweep, fill: color, stroke: Some(Line::solid(1.0, o.theme.visual_background)) }, Hit { point, tooltip: tooltip(d, row) }, dimmed);
-        a += sweep;
+    let mut out = Vec::with_capacity(pts.len() * 8);
+    let get = |i: isize| -> (f32, f32) {
+        let i = i.clamp(0, pts.len() as isize - 1) as usize;
+        pts.get(i).copied().unwrap_or_default()
+    };
+    for i in 0..pts.len() - 1 {
+        let p0 = get(i as isize - 1);
+        let p1 = get(i as isize);
+        let p2 = get(i as isize + 1);
+        let p3 = get(i as isize + 2);
+        let (ylo, yhi) = (p1.1.min(p2.1), p1.1.max(p2.1));
+        let steps = 10;
+        for s in 0..steps {
+            let t = s as f32 / steps as f32;
+            let t2 = t * t;
+            let t3 = t2 * t;
+            let x = 0.5 * ((2.0 * p1.0) + (-p0.0 + p2.0) * t + (2.0 * p0.0 - 5.0 * p1.0 + 4.0 * p2.0 - p3.0) * t2 + (-p0.0 + 3.0 * p1.0 - 3.0 * p2.0 + p3.0) * t3);
+            let y = 0.5 * ((2.0 * p1.1) + (-p0.1 + p2.1) * t + (2.0 * p0.1 - 5.0 * p1.1 + 4.0 * p2.1 - p3.1) * t2 + (-p0.1 + 3.0 * p1.1 - 3.0 * p2.1 + p3.1) * t3);
+            // Keep within the segment's y-range (monotone-ish).
+            let pad = (yhi - ylo) * 0.15;
+            out.push((x, y.clamp(ylo - pad, yhi + pad)));
+        }
     }
-    s
+    if let Some(l) = pts.last() {
+        out.push(*l);
+    }
+    out
 }
 
-fn columns(spec: &VisualSpec, d: &VisualData, o: &RenderOpts) -> Scene {
-    let mut s = Scene::new(o.width, o.height);
-    let vals = d.values();
-    let Some(ai) = d.categories().first().copied() else { return card(d, o) };
-    if vals.is_empty() {
-        return super::message(o, "Add a value");
-    }
-    let horizontal = matches!(spec.kind, VisualKind::StackedBar | VisualKind::ClusteredBar | VisualKind::StackedBar100);
-    let line = matches!(spec.kind, VisualKind::Line | VisualKind::Area | VisualKind::StackedArea);
-    let cats = d.distinct(ai);
-    let n = cats.len().max(1);
-    let max = d.rows.iter().flat_map(|r| vals.iter().filter_map(|v| r.get(*v)?.as_f64())).fold(0.0f64, f64::max);
-    let min = d.rows.iter().flat_map(|r| vals.iter().filter_map(|v| r.get(*v)?.as_f64())).fold(0.0f64, f64::min);
-    let ticks = nice_ticks(min, max, 5);
-    let lo = ticks.first().copied().unwrap_or(0.0);
-    let hi = ticks.last().copied().unwrap_or(1.0).max(lo + 1e-9);
-    let label_w = if horizontal { cats.iter().map(|c| text_width(&c.text(), 10.0)).fold(0.0, f32::max).min(o.width * 0.35) + 8.0 } else { 36.0 };
-    let plot = Rect::new(label_w, 4.0, (o.width - label_w - 8.0).max(1.0), (o.height - 24.0).max(1.0));
-    let grid = o.props.color("grid.color", Color::rgb(0xE6, 0xE8, 0xEC));
-    let scale = |v: f64| -> f32 { ((v - lo) / (hi - lo)) as f32 };
-    for t in &ticks {
-        if horizontal {
-            let x = plot.x + plot.w * scale(*t);
-            s.line((x, plot.y), (x, plot.bottom()), Line::solid(1.0, grid));
-            s.text(x, plot.bottom() + 4.0, short_num(*t, "Auto"), 9.0, o.theme.foreground_muted, Align::Center, Align::Start);
-        } else {
-            let y = plot.bottom() - plot.h * scale(*t);
-            s.line((plot.x, y), (plot.right(), y), Line::solid(1.0, grid));
-            s.text(plot.x - 4.0, y, short_num(*t, "Auto"), 9.0, o.theme.foreground_muted, Align::End, Align::Center);
+/// Step interpolation (horizontal then vertical, centred on points).
+pub fn step(pts: &[(f32, f32)]) -> Vec<(f32, f32)> {
+    let mut out = Vec::with_capacity(pts.len() * 2);
+    for (i, p) in pts.iter().enumerate() {
+        if i == 0 {
+            out.push(*p);
+            continue;
         }
+        let prev = pts.get(i - 1).copied().unwrap_or(*p);
+        let mx = (prev.0 + p.0) / 2.0;
+        out.push((mx, prev.1));
+        out.push((mx, p.1));
+        out.push(*p);
     }
-    let band = if horizontal { plot.h } else { plot.w } / n as f32;
-    let mut pts: Vec<Vec<(f32, f32)>> = vec![Vec::new(); vals.len()];
-    for (ci, c) in cats.iter().enumerate() {
-        let rows: Vec<usize> = (0..d.rows.len()).filter(|r| d.cell(*r, ai).key() == c.key()).collect();
-        let start = ci as f32 * band;
-        let label = ellipsize(&c.text(), 10.0, if horizontal { label_w - 6.0 } else { band.max(20.0) });
-        if horizontal {
-            s.text(plot.x - 4.0, plot.y + start + band / 2.0, label, 10.0, o.theme.foreground_muted, Align::End, Align::Center);
-        } else if n <= 40 || ci % (n / 20).max(1) == 0 {
-            s.text(plot.x + start + band / 2.0, plot.bottom() + 4.0, label, 10.0, o.theme.foreground_muted, Align::Center, Align::Start);
+    out
+}
+
+pub fn interpolate(o: &RenderOpts, pts: &[(f32, f32)]) -> Vec<(f32, f32)> {
+    match o.props.text("lines.interpolation", "Linear").as_str() {
+        "Smooth" => smooth(pts),
+        "Step" => step(pts),
+        _ => pts.to_vec(),
+    }
+}
+
+/// A marker shape at a point.
+pub fn marker_shape(shape: &str, x: f32, y: f32, r: f32, fill: Color, ring: Option<Color>) -> Shape {
+    let stroke = ring.map(|c| Line::solid(1.5, c));
+    match shape {
+        "Square" => Shape::Rect { rect: Rect::new(x - r, y - r, r * 2.0, r * 2.0), fill: Some(fill), stroke, radius: 1.0 },
+        "Diamond" => Shape::Path { points: vec![(x, y - r * 1.25), (x + r * 1.25, y), (x, y + r * 1.25), (x - r * 1.25, y)], closed: true, fill: Some(fill), stroke },
+        "Triangle" => Shape::Path { points: vec![(x, y - r * 1.25), (x + r * 1.15, y + r * 0.9), (x - r * 1.15, y + r * 0.9)], closed: true, fill: Some(fill), stroke },
+        _ => Shape::Circle { cx: x, cy: y, r, fill: Some(fill), stroke },
+    }
+}
+
+/// Copies `src` into `dst`, offset by (dx, dy) (small multiples, Q&A, composite visuals).
+pub fn embed(dst: &mut Scene, src: Scene, dx: f32, dy: f32) {
+    for mut it in src.items {
+        offset_shape(&mut it.shape, dx, dy);
+        dst.items.push(it);
+    }
+    for (r, a) in src.actions {
+        dst.actions.push((Rect::new(r.x + dx, r.y + dy, r.w, r.h), a));
+    }
+    if let Some(m) = src.message {
+        dst.text(dx + src.width / 2.0, dy + src.height / 2.0, m, 11.0, Color::rgb(0x88, 0x88, 0x88), Align::Center, Align::Center);
+    }
+}
+
+pub fn offset_shape(s: &mut Shape, dx: f32, dy: f32) {
+    match s {
+        Shape::Rect { rect, .. } | Shape::Image { rect, .. } => {
+            rect.x += dx;
+            rect.y += dy;
         }
-        let Some(&r) = rows.first() else { continue };
-        let k = vals.len() as f32;
-        for (vi, v) in vals.iter().enumerate() {
-            let val = d.num(r, *v).unwrap_or(0.0);
-            let point = d.identity(r, &["axis"]);
-            let key = crate::fx::point_key(&point);
-            let color = if vals.len() == 1 { series_color(o, 0, &key) } else { series_color(o, vi, &format!("series:{vi}")) };
-            let dimmed = dim(o, &point);
-            let hit = Hit { point, tooltip: tooltip(d, r) };
-            if line {
-                let x = plot.x + start + band / 2.0;
-                let y = plot.bottom() - plot.h * scale(val);
-                if let Some(p) = pts.get_mut(vi) {
-                    p.push((x, y));
-                }
-                s.push_hit(Shape::Circle { cx: x, cy: y, r: 3.0, fill: Some(color), stroke: None }, hit, dimmed);
-            } else {
-                let inner = band * 0.75;
-                let bw = inner / k;
-                let off = start + (band - inner) / 2.0 + bw * vi as f32;
-                let z = scale(0.0f64.max(lo));
-                let rect = if horizontal {
-                    let x0 = plot.x + plot.w * z;
-                    let x1 = plot.x + plot.w * scale(val);
-                    Rect::new(x0.min(x1), plot.y + off, (x1 - x0).abs(), bw)
-                } else {
-                    let y0 = plot.bottom() - plot.h * z;
-                    let y1 = plot.bottom() - plot.h * scale(val);
-                    Rect::new(plot.x + off, y0.min(y1), bw, (y1 - y0).abs())
-                };
-                s.push_hit(Shape::Rect { rect, fill: Some(color), stroke: None, radius: o.props.f32("plot.cornerRadius", 2.0) }, hit, dimmed);
+        Shape::Path { points, .. } => {
+            for p in points.iter_mut() {
+                p.0 += dx;
+                p.1 += dy;
             }
         }
-    }
-    for (vi, p) in pts.into_iter().enumerate() {
-        if p.len() > 1 {
-            s.push(Shape::Path { points: p, closed: false, fill: None, stroke: Some(Line::solid(o.props.f32("lines.width", 2.5), series_color(o, vi, &format!("series:{vi}")))) });
+        Shape::Circle { cx, cy, .. } | Shape::Arc { cx, cy, .. } => {
+            *cx += dx;
+            *cy += dy;
+        }
+        Shape::Text { x, y, .. } => {
+            *x += dx;
+            *y += dy;
         }
     }
-    s
+}
+
+/// Text with a soft rounded background (data labels with "labels.background").
+#[allow(clippy::too_many_arguments)]
+pub fn label_box(s: &mut Scene, o: &RenderOpts, x: f32, y: f32, text: &str, size: f32, color: Color, h: Align, v: Align) {
+    if o.props.bool("labels.background", false) {
+        let w = text_width(text, size) + 6.0;
+        let left = match h {
+            Align::Start => x - 3.0,
+            Align::Center => x - w / 2.0,
+            Align::End => x - w + 3.0,
+        };
+        let top = match v {
+            Align::Start => y - 1.0,
+            Align::Center => y - size * 0.65,
+            Align::End => y - size * 1.2,
+        };
+        s.push(Shape::Rect { rect: Rect::new(left, top, w, size * 1.35), fill: Some(o.theme.visual_background.with_alpha(220)), stroke: None, radius: 3.0 });
+    }
+    s.text(x, y, text, size, color, h, v);
+}
+
+/// A rounded rectangle helper.
+pub fn rrect(rect: Rect, fill: Color, radius: f32) -> Shape {
+    Shape::Rect { rect, fill: Some(fill), stroke: None, radius }
+}
+
+/// Wraps text into lines that fit `max_w`.
+pub fn wrap(text: &str, size: f32, max_w: f32) -> Vec<String> {
+    let mut lines = Vec::new();
+    for para in text.split('\n') {
+        let mut cur = String::new();
+        for w in para.split_whitespace() {
+            let cand = if cur.is_empty() { w.to_string() } else { format!("{cur} {w}") };
+            if text_width(&cand, size) > max_w && !cur.is_empty() {
+                lines.push(std::mem::take(&mut cur));
+                cur = w.to_string();
+            } else {
+                cur = cand;
+            }
+        }
+        lines.push(cur);
+    }
+    lines
+}
+
+/// The display label of a category value (dates formatted with the column's format).
+pub fn cat_text(d: &VisualData, row: usize, col: usize) -> String {
+    match d.cell(row, col) {
+        Scalar::Null => "(Blank)".into(),
+        // Whole numbers in an unformatted category (years, ids): no thousands separator.
+        Scalar::Num(n) if n.fract() == 0.0 && d.cols.get(col).is_some_and(|c| c.format.is_empty() && !c.col_type.is_temporal()) => crate::numfmt::general(*n),
+        _ => d.text(row, col),
+    }
+}
+
+/// "January" → "Jan" (for crowded month axes).
+pub fn abbreviate_months(label: &str) -> String {
+    const M: [&str; 12] = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let mut out = label.to_string();
+    for m in M {
+        if out.contains(m) {
+            out = out.replace(m, m.get(..3).unwrap_or(m));
+        }
+    }
+    out
+}
+
+/// A short, centred placeholder for empty visuals.
+pub fn empty(o: &RenderOpts, msg: &str) -> Scene {
+    super::message(o, msg)
+}
+
+pub fn ell(text: &str, size: f32, w: f32) -> String {
+    ellipsize(text, size, w.max(8.0))
+}
+
+/// The default gradient (low → high) for heat maps / filled maps: one hue, light to dark.
+pub fn seq_color(o: &RenderOpts, t: f64) -> Color {
+    let hi = o.props.color_opt("dataColors.max").or(o.props.color_opt("dataColors.default")).unwrap_or(o.theme.series_color(0));
+    let lo = o.props.color_opt("dataColors.min").unwrap_or(o.theme.visual_background.lerp(hi, 0.08));
+    lo.lerp(hi, t.clamp(0.0, 1.0))
 }

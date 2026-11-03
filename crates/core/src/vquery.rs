@@ -232,6 +232,24 @@ pub fn plan(p: &Project, built: &Built, spec: &VisualSpec) -> (Vec<(String, Fiel
 /// Runs a visual's query in a filter context.
 pub fn run(p: &Project, built: &Built, spec: &VisualSpec, cx: &Context) -> VisualData {
     match spec.kind {
+        VisualKind::KeyInfluencers | VisualKind::DecompositionTree | VisualKind::SmartNarrative => {
+            if let Some(d) = crate::charts::ai::run(p, built, spec, cx) {
+                return d;
+            }
+        }
+        VisualKind::Matrix if !spec.expanded.is_empty() => {
+            // Rows expanded with +/-: fetch the levels down to the deepest expanded row.
+            let deepest = spec.expanded.iter().filter_map(|k| serde_json::from_str::<Vec<Scalar>>(k).ok()).map(|p| p.len()).max().unwrap_or(0);
+            if deepest > spec.drill.expand_to {
+                let mut s2 = spec.clone();
+                s2.drill.expand_to = deepest;
+                s2.expanded.clear();
+                return run(p, built, &s2, cx);
+            }
+        }
+        _ => {}
+    }
+    match spec.kind {
         VisualKind::Slicer => return slicer_values(p, built, spec, cx),
         VisualKind::QandA => {
             let (wells, _) = crate::charts::qna::interpret(p, built, &spec.question);
