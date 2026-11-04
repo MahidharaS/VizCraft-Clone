@@ -214,7 +214,7 @@ pub fn rewrite_top(sql: &str) -> String {
     let (Some(a), Some(b), Some(c)) = (toks.first(), toks.get(1), toks.get(2)) else { return sql.to_string() };
     if sql[a.0.clone()].eq_ignore_ascii_case("select") && sql[b.0.clone()].eq_ignore_ascii_case("top") && c.1 == Tok::Number && !sql.to_ascii_lowercase().contains(" limit ") {
         let n = &sql[c.0.clone()];
-        return format!("{}{} LIMIT {}", &sql[..b.0.start], sql[c.0.end..].trim_end(), n);
+        return format!("{}{} LIMIT {}", &sql[..b.0.start], sql[c.0.end..].trim(), n);
     }
     sql.to_string()
 }
