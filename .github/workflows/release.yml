@@ -1,0 +1,146 @@
+# Builds VizCraft for macOS (universal DMG), Linux (tar.gz + AppImage) and Windows (zip).
+# Every push uploads the packages as workflow artifacts; a `vizcraft-v*` tag also publishes a
+# GitHub release with them attached.
+name: VizCraft release
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+    paths: ["**"]
+    tags: ["vizcraft-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vizcraft-release-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+defaults:
+  run:
+    working-directory: .
+
+jobs:
+  macos:
+    name: macOS (universal DMG)
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown, aarch64-apple-darwin, x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: vizcraft
+          key: macos-universal
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/vizcraft-v* ]]; then echo "VIZCRAFT_VERSION=${GITHUB_REF#refs/tags/vizcraft-v}" >> "$GITHUB_ENV"; fi
+      - name: Build the DMG
+        run: packaging/macos/make-dmg.sh --arch universal
+        env:
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY || '-' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vizcraft-macos
+          path: ./dist/*.dmg
+          if-no-files-found: error
+
+  linux:
+    name: Linux (tar.gz, AppImage)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: System libraries
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-x11-0 libxkbcommon-dev libgtk-3-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libgl1-mesa-dev libwayland-dev libfuse2 desktop-file-utils
+      - name: appimagetool
+        working-directory: .
+        run: |
+          curl -fsSL -o /usr/local/bin/appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /usr/local/bin/appimagetool
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: vizcraft
+      - name: Version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/vizcraft-v* ]]; then echo "VIZCRAFT_VERSION=${GITHUB_REF#refs/tags/vizcraft-v}" >> "$GITHUB_ENV"; fi
+      - name: Test
+        run: cargo test -p vizcraft-core -p vizcraft-publish -p vizcraft-server -p vizcraft-wasm
+      - name: Package
+        run: packaging/linux/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vizcraft-linux
+          path: |
+            ./dist/*.tar.gz
+            ./dist/*.AppImage
+          if-no-files-found: error
+
+  windows:
+    name: Windows (zip)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: vizcraft
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/vizcraft-v* ]]; then echo "VIZCRAFT_VERSION=${GITHUB_REF#refs/tags/vizcraft-v}" >> "$GITHUB_ENV"; fi
+      - name: Package
+        shell: pwsh
+        run: ./packaging/windows/package.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vizcraft-windows
+          path: |
+            ./dist/*.zip
+            ./dist/*.msi
+          if-no-files-found: error
+
+  release:
+    name: GitHub release
+    if: startsWith(github.ref, 'refs/tags/vizcraft-v')
+    needs: [macos, linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: VizCraft ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            artifacts/*.dmg
+            artifacts/*.tar.gz
+            artifacts/*.AppImage
+            artifacts/*.zip
+            artifacts/*.msi

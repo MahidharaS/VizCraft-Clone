@@ -32,7 +32,7 @@ everything drawn in code. It runs on macOS, Windows and Linux.
 ## Install
 
 ### Download (macOS, Windows, Linux)
-Every push to this branch builds installers in GitHub Actions (`.github/workflows/vizcraft-release.yml`):
+Every push to `main` builds installers in GitHub Actions (`.github/workflows/release.yml`):
 open the latest **VizCraft release** workflow run → **Artifacts** → `VizCraft-macOS` (a `.dmg`),
 `VizCraft-Windows` (zip) or `VizCraft-Linux` (tar.gz). Tags named `vizcraft-v*` also publish a GitHub Release.
 
@@ -41,8 +41,8 @@ The macOS build is ad-hoc signed, not notarized: the first time, right-click **V
 
 ### Build from source
 ```bash
-git clone https://github.com/digital-maven/all.git
-cd all/vizcraft
+git clone https://github.com/Digital-Maven/vizcraft.git
+cd vizcraft
 cargo run --release -p vizcraft -- --sample
 ```
 Make a DMG on a Mac (needs Xcode command-line tools):
@@ -80,6 +80,6 @@ Docs: [publishing](docs/publishing.md) · [SQL](docs/sql.md) · [AI](docs/ai.md)
 
 ## Licence
 MIT OR Apache-2.0. See [NOTICE](NOTICE): the DAX and M engines started from GridCraft (in this
-repository's `vizclone/`). VizCraft is not affiliated with Microsoft, Salesforce/Tableau, Figma,
+`digital-maven/all` repository's `vizclone/` directory). VizCraft is not affiliated with Microsoft, Salesforce/Tableau, Figma,
 Orange or KNIME; no vendor code, icons or artwork are used. OpenJEV weights are CC BY-NC 4.0 and are
 not bundled — you download and run them yourself.
