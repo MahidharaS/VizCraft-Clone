@@ -97,6 +97,8 @@ pub struct VizApp {
     pub disk_stamp: Option<std::time::SystemTime>,
     pub disk_checked: f64,
     pub disk_warned: bool,
+    pub welcome_prompt: String,
+    pub welcome_dismissed: bool,
     pub built: Built,
     pub rt: Runtime,
     pub view: View,
@@ -153,6 +155,8 @@ impl VizApp {
             disk_stamp: None,
             disk_checked: 0.0,
             disk_warned: false,
+            welcome_prompt: String::new(),
+            welcome_dismissed: false,
             built: Built::default(),
             rt: Runtime::default(),
             view: View::Report,
@@ -244,6 +248,7 @@ impl VizApp {
     // ---------------------------------------------------------------- project lifecycle
 
     pub fn load_project(&mut self, p: Project, path: Option<PathBuf>) {
+        self.welcome_dismissed = false;
         self.project = p;
         self.path = path;
         self.dirty = false;
@@ -262,6 +267,7 @@ impl VizApp {
                 let path = if path.is_dir() { vizcraft_core::project_folder::find_pointer(&path).unwrap_or(path) } else { path };
                 self.load_project(p, Some(path.clone()));
                 self.disk_stamp = disk_stamp(&path);
+                crate::welcome::remember(&path);
                 self.toast(format!("Opened {}", path.display()));
             }
             Err(e) => self.error(format!("Couldn't open {}: {e}", path.display())),
@@ -302,6 +308,7 @@ impl VizApp {
                 self.path = Some(path.clone());
                 self.dirty = false;
                 self.disk_stamp = disk_stamp(&path);
+                crate::welcome::remember(&path);
                 self.toast(format!("Saved {}", path.display()));
             }
             Err(e) => self.error(format!("Couldn't save: {e}")),
@@ -642,6 +649,11 @@ impl eframe::App for VizApp {
         }
         let t = self.tokens();
         self.watch_disk(&ctx);
+        // Drop a .vizc / .vizp project (or a project folder) on the window to open it.
+        let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().map(|f| f.path().to_path_buf()).filter(|p| !p.as_os_str().is_empty()).collect());
+        if let Some(p) = dropped.into_iter().find(|p| p.is_dir() || p.extension().is_some_and(|e| e == "vizc" || e == "vizp" || e == "json")) {
+            self.open_path(p);
+        }
         self.keys(&ctx);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.title()));
         crate::ribbon::show(self, ui, &t);
@@ -654,6 +666,7 @@ impl eframe::App for VizApp {
             crate::pq::show(self, ui);
         } else {
             match self.view {
+                View::Report if !self.welcome_dismissed && crate::welcome::is_empty(self) => crate::welcome::show(self, ui),
                 View::Report => crate::report::show(self, ui),
                 View::Table => crate::model::table_view(self, ui),
                 View::Model => crate::model::model_view(self, ui),

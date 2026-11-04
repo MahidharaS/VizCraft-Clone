@@ -29,6 +29,11 @@ pub fn app_icon() -> egui::IconData {
                     px = [255, 255, 255, 255];
                 }
             }
+            // The spark (four-point star) above the short bars.
+            let (dx, dy) = (((x as f32 + 0.5) - 15.0).abs() / 8.0, ((y as f32 + 0.5) - 16.0).abs() / 8.0);
+            if dx.sqrt() + dy.sqrt() <= 1.0 {
+                px = [0xFD, 0xE6, 0x8A, 255];
+            }
             if let Some(slot) = rgba.get_mut(i..i + 4) {
                 slot.copy_from_slice(&px);
             }

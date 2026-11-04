@@ -303,3 +303,30 @@ partially working code that was **never merged or build-checked together**.
 - Still open from §3 (known issues): many-to-many filtering, matrix tabular layout, chart zoom
   slider, sheet sort not rewriting formulas, PQ gear dialogs, fuzzy merge; AI calls with real keys
   and OpenJEV were not exercised (no keys/servers here); the DMG has to come from the CI run.
+
+## 9. Session 2, second request: polish, local models, Copilot everywhere, Git format
+
+The user asked for: every kind of fine-tuning and UI/UX improvement (logos etc.); local AI models
+installed through the terminal weren't detected; a Copilot that controls the whole app (like Claude
+in Excel), not just one pane; a PBIP/PBIR-style Git format that agents can edit from the terminal or
+VS Code; and a decision on how project files are stored.
+
+- **File formats** (`docs/file-formats.md`): `.vizc` (single JSON file, like .pbix) and `.vizp`
+  (pointer + folders, like .pbip/PBIR: measures as .dax, queries as .m, tables/pages/visuals as
+  JSON by id, sheets as CSV). `crates/core/src/project_folder.rs`, lossless round-trip test. The
+  app opens/saves both, drops, recent list, and reloads on outside changes.
+- **Agents**: `vizcraft-server convert | validate | describe | dax | tools | tool | mcp`. The MCP
+  server exposes the Copilot tools over stdio; saved folders get `.mcp.json`, `.vscode/` and
+  `AGENTS.md`.
+- **Copilot everywhere**: title-bar button + Ctrl/⌘+I in every view; 20 new tools
+  (`get_project`/`edit_project` for any part of the document, TMDL, relationships, calculated
+  columns, update query, delete, move, text, shapes, sheets/cells, Studio workflows/widgets,
+  refresh, navigate, app commands). Tested in `whole_app_tools_edit_everything`.
+- **Local models**: the probes used `localhost`, which on macOS can resolve to IPv6 while Ollama
+  listens on IPv4 only, so running servers looked absent; now 127.0.0.1 (old settings migrate),
+  `OLLAMA_HOST`, plus MLX, Jan, GPT4All. New `crates/ai/src/installed.rs` lists models on disk
+  (Ollama store, LM Studio, GGUF files, Hugging Face/MLX cache), finds CLIs outside PATH (GUI apps
+  on macOS don't get the shell PATH), and **Start & use** launches the server. A running local model
+  is selected automatically at startup when nothing is configured. Verified with a fake Ollama.
+- **UI**: welcome screen (quick starts, Copilot prompt, recent projects, blank report link), new
+  logo (bars + spark) in the title bar, app icon updated to match, `.vizp` file association on macOS.

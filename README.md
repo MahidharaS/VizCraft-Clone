@@ -27,6 +27,7 @@ everything drawn in code. It runs on macOS, Windows and Linux.
 | **Flows & notebooks** | Fabric/KNIME-style node pipelines and Python/DAX/M notebook cells whose outputs become model tables |
 | **SQL** | Embedded DuckDB over every model table, plus your own warehouse tables; SQL editor, results grid, Python cells |
 | **AI** | Bring your own key (OpenAI, Anthropic, Gemini, Hugging Face) or a local model (Ollama, LM Studio, llama.cpp, vLLM); Copilot pane that builds visuals and writes DAX/M; a Data Formulator-style exploration view; OpenJEV as a decision engine; a personal model that learns your habits on your machine |
+| **Git & agents** | Save as a `.vizp` folder project (like Power BI PBIP/PBIR): one file per measure, query, page and visual; the app reloads on outside edits; `vizcraft-server` CLI and an MCP server let Claude Code, VS Code and Cursor agents edit projects with the Copilot's tools |
 | **Publish** | VizCraft Service (self-hosted portal with workspaces, desktop and phone views), a static web folder, one self-contained HTML file to share anywhere, GitHub Pages with your own domain, SVG export. Published reports stay interactive (the engine runs in the browser as WebAssembly) |
 
 ## Install
@@ -76,7 +77,7 @@ apps/vizcraft-mlserve  ML model serving
 Visuals are drawn once into a renderer-independent `Scene`; the desktop paints it with egui and the
 web writes it as SVG, so published reports look exactly like the desktop.
 
-Docs: [publishing](docs/publishing.md) · [SQL](docs/sql.md) · [AI](docs/ai.md) · [Data Science Studio](docs/studio.md) · [build log and hand-over](docs/SESSION_LOG.md).
+Docs: [file formats, Git and agents](docs/file-formats.md) · [publishing](docs/publishing.md) · [SQL](docs/sql.md) · [AI](docs/ai.md) · [Data Science Studio](docs/studio.md) · [build log and hand-over](docs/SESSION_LOG.md).
 
 ## Licence
 MIT OR Apache-2.0. See [NOTICE](NOTICE): the DAX and M engines started from GridCraft (the

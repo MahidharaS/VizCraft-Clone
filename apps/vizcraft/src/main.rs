@@ -5,6 +5,7 @@ mod ai;
 mod app;
 mod flows;
 mod studio;
+mod welcome;
 mod icons;
 mod model;
 mod paint;

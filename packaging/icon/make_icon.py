@@ -63,6 +63,13 @@ def draw(n):
                 bd = rounded_rect_sdf(gx, gy, bx, (btop + 50) / 2.0, 4.0, (50 - btop) / 2.0, 1.6) * ts
                 bar = max(bar, coverage(bd))
             col = [v + (255 - v) * bar for v in col]
+            # The spark (a four-point astroid star) above the short bars: AI built in.
+            sx, sy, sr = 15.0, 16.0, 8.0
+            dxs, dys = abs(gx - sx) / sr, abs(gy - sy) / sr
+            star = math.sqrt(dxs) + math.sqrt(dys)
+            sa = min(max((1.0 - star) * sr * ts * 0.9 + 0.5, 0.0), 1.0)
+            spark = (0xFD, 0xE6, 0x8A)
+            col = [col[i] + (spark[i] - col[i]) * sa for i in range(3)]
             a = a_tile + shadow * (1 - a_tile)
             if a <= 0:
                 row += b"\x00\x00\x00\x00"

@@ -41,7 +41,7 @@
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © the VizCraft authors. MIT OR Apache-2.0.</string>
 
-  <!-- VizCraft projects (.vizc). -->
+  <!-- VizCraft projects: .vizc (single file) and .vizp (Git-friendly folder project pointer). -->
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>
@@ -74,7 +74,7 @@
       <key>UTTypeTagSpecification</key>
       <dict>
         <key>public.filename-extension</key>
-        <array><string>vizc</string></array>
+        <array><string>vizc</string><string>vizp</string></array>
       </dict>
     </dict>
   </array>

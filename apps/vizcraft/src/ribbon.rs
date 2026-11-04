@@ -19,7 +19,7 @@ pub fn show(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
     egui::Panel::top("titlebar").exact_size(34.0).frame(egui::Frame::new().fill(t.rail).inner_margin(egui::Margin::symmetric(10, 4))).show(ui, |ui| {
         ui.horizontal_centered(|ui| {
             let (r, _) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), egui::Sense::hover());
-            crate::icons::paint(ui.painter(), r, "report", Color32::from_rgb(0x5E, 0xEA, 0xD4));
+            crate::welcome::logo(ui.painter(), r);
             ui.label(RichText::new("VizCraft").strong().color(Color32::WHITE).size(14.0));
             ui.add_space(8.0);
             for (icon, tip, act) in [("save", "Save (Ctrl+S)", 0), ("undo", "Undo (Ctrl+Z)", 1), ("redo", "Redo (Ctrl+Y)", 2)] {
