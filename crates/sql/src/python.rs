@@ -8,8 +8,8 @@ use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-use vizcraft_core::build::ColType;
-use vizcraft_core::scalar::Scalar;
+use vizardcraft_core::build::ColType;
+use vizardcraft_core::scalar::Scalar;
 
 use crate::{QueryResult, Result};
 
@@ -33,10 +33,10 @@ pub struct PythonRun {
     started: Instant,
 }
 
-/// The Python interpreter to use: `$VIZCRAFT_PYTHON`, `python3`, then `python`.
+/// The Python interpreter to use: `$VIZARDCRAFT_PYTHON`, `python3`, then `python`.
 pub fn interpreter() -> Option<String> {
     let mut cands = vec![];
-    if let Ok(p) = std::env::var("VIZCRAFT_PYTHON") {
+    if let Ok(p) = std::env::var("VIZARDCRAFT_PYTHON") {
         cands.push(p);
     }
     cands.push("python3".into());
@@ -49,7 +49,7 @@ import sys, json
 try:
     import pandas as pd
 except ImportError:
-    sys.stderr.write("VIZCRAFT_NO_PANDAS\n")
+    sys.stderr.write("VIZARDCRAFT_NO_PANDAS\n")
     sys.exit(3)
 _cfg = json.load(open(sys.argv[1]))
 try:
@@ -76,8 +76,8 @@ if out is not None:
 
 /// Starts a script over `df`.
 pub fn start(script: &str, df: &QueryResult) -> Result<PythonRun> {
-    let py = interpreter().ok_or("Python isn't installed (or not on PATH). Install Python 3 with pandas (`pip install pandas`), or set VIZCRAFT_PYTHON to its path.")?;
-    let dir = std::env::temp_dir().join(format!("vizcraft-py-{}-{}", std::process::id(), COUNTER.fetch_add(1, Ordering::Relaxed)));
+    let py = interpreter().ok_or("Python isn't installed (or not on PATH). Install Python 3 with pandas (`pip install pandas`), or set VIZARDCRAFT_PYTHON to its path.")?;
+    let dir = std::env::temp_dir().join(format!("vizardcraft-py-{}-{}", std::process::id(), COUNTER.fetch_add(1, Ordering::Relaxed)));
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let input = dir.join("df.csv");
     let user = dir.join("cell.py");
@@ -120,7 +120,7 @@ impl PythonRun {
         };
         let stdout = std::fs::read_to_string(self.dir.join("stdout.txt")).unwrap_or_default();
         let mut stderr = std::fs::read_to_string(self.dir.join("stderr.txt")).unwrap_or_default();
-        if stderr.contains("VIZCRAFT_NO_PANDAS") {
+        if stderr.contains("VIZARDCRAFT_NO_PANDAS") {
             stderr = "pandas isn't installed for this Python. Install it with `python3 -m pip install pandas`.".into();
         }
         let out = std::fs::read_to_string(self.dir.join("out.json")).ok().and_then(|s| parse_output(&s));
@@ -181,7 +181,7 @@ fn parse_output(s: &str) -> Option<QueryResult> {
             (0..columns.len())
                 .map(|i| match (col_types.get(i).copied().unwrap_or_default(), cells.get(i).unwrap_or(&serde_json::Value::Null)) {
                     (_, serde_json::Value::Null) => Scalar::Null,
-                    (ColType::DateTime, serde_json::Value::String(s)) => vizcraft_core::build::parse_date(&s.replace('T', " ")).map(Scalar::Num).unwrap_or_else(|| Scalar::Text(s.clone())),
+                    (ColType::DateTime, serde_json::Value::String(s)) => vizardcraft_core::build::parse_date(&s.replace('T', " ")).map(Scalar::Num).unwrap_or_else(|| Scalar::Text(s.clone())),
                     (_, serde_json::Value::Bool(b)) => Scalar::Bool(*b),
                     (_, serde_json::Value::Number(n)) => Scalar::Num(n.as_f64().unwrap_or(f64::NAN)),
                     (_, serde_json::Value::String(s)) => Scalar::Text(s.clone()),

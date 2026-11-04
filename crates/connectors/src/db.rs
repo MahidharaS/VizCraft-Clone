@@ -10,8 +10,8 @@
 //! connection URL given as the server (`postgresql://user:pass@host/db`), or from the
 //! environment (`PGUSER`/`PGPASSWORD`, `MYSQL_USER`/`MYSQL_PASSWORD`).
 
-use vizcraft_query::value::{days_of, serial_of};
-use vizcraft_query::{Error, MType, Result, Table, Value};
+use vizardcraft_query::value::{days_of, serial_of};
+use vizardcraft_query::{Error, MType, Result, Table, Value};
 
 use crate::Args;
 

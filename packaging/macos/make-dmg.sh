@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Builds VizCraft.app and a drag-to-Applications DMG:
+# Builds VizardCraft.app and a drag-to-Applications DMG:
 #
-#   dist/VizCraft-<version>-macos-<arch>.dmg
+#   dist/VizardCraft-<version>-macos-<arch>.dmg
 #
 # Usage: packaging/macos/make-dmg.sh [--arch host|universal|aarch64|x86_64] [--skip-build]
 #
@@ -11,7 +11,7 @@
 #
 # Signing: ad-hoc (`codesign -s -`) unless MACOS_SIGN_IDENTITY names a Developer ID identity.
 # An ad-hoc signed app downloaded from the internet is quarantined by Gatekeeper: right-click
-# VizCraft.app → Open (once), or run `xattr -dr com.apple.quarantine /Applications/VizCraft.app`.
+# VizardCraft.app → Open (once), or run `xattr -dr com.apple.quarantine /Applications/VizardCraft.app`.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -48,31 +48,31 @@ case "$ARCH" in
 esac
 
 VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
-VERSION="${VIZCRAFT_VERSION:-$VERSION}"
+VERSION="${VIZARDCRAFT_VERSION:-$VERSION}"
 BUILD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 IDENTITY="${MACOS_SIGN_IDENTITY:--}"
 export MACOSX_DEPLOYMENT_TARGET=11.0
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
 WORK="$TARGET_DIR/macos-package"
 DIST="$ROOT/dist"
-APP="$WORK/VizCraft.app"
-DMG="$DIST/VizCraft-$VERSION-macos-$ARCH.dmg"
+APP="$WORK/VizardCraft.app"
+DMG="$DIST/VizardCraft-$VERSION-macos-$ARCH.dmg"
 
-echo "==> VizCraft $VERSION for macOS ($ARCH), signing identity: $IDENTITY"
+echo "==> VizardCraft $VERSION for macOS ($ARCH), signing identity: $IDENTITY"
 
 # ---- build ---------------------------------------------------------------------------------------
 if [[ "$SKIP_BUILD" = 0 ]]; then
-  # The web viewer engine first: vizcraft-publish embeds it, so published reports are interactive.
+  # The web viewer engine first: vizardcraft-publish embeds it, so published reports are interactive.
   "$ROOT/packaging/build-wasm.sh"
   for t in "${TARGETS[@]}"; do rustup target add "$t" >/dev/null 2>&1 || true; done
   args=()
   for t in "${TARGETS[@]}"; do args+=(--target "$t"); done
-  cargo build --release -p vizcraft -p vizcraft-server -p vizcraft-mlserve "${args[@]}"
+  cargo build --release -p vizardcraft -p vizardcraft-server -p vizardcraft-mlserve "${args[@]}"
 fi
 
 rm -rf "$WORK"
 mkdir -p "$WORK/bin" "$DIST"
-for bin in vizcraft vizcraft-server vizcraft-mlserve; do
+for bin in vizardcraft vizardcraft-server vizardcraft-mlserve; do
   inputs=()
   for t in "${TARGETS[@]}"; do inputs+=("$TARGET_DIR/$t/release/$bin"); done
   if [[ ${#inputs[@]} -gt 1 ]]; then
@@ -85,25 +85,25 @@ done
 
 # ---- icon ----------------------------------------------------------------------------------------
 echo "==> icon"
-ICONSET="$WORK/VizCraft.iconset"
+ICONSET="$WORK/VizardCraft.iconset"
 mkdir -p "$ICONSET"
-python3 "$ROOT/packaging/icon/make_icon.py" 1024 "$WORK/icon_1024.png"
+cp "$ROOT/packaging/icon/vizardcraft-icon-1024.png" "$WORK/icon_1024.png"
 for s in 16 32 128 256 512; do
   sips -z "$s" "$s" "$WORK/icon_1024.png" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
   d=$((s * 2))
   sips -z "$d" "$d" "$WORK/icon_1024.png" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
 done
-iconutil -c icns "$ICONSET" -o "$WORK/VizCraft.icns"
+iconutil -c icns "$ICONSET" -o "$WORK/VizardCraft.icns"
 
-# ---- VizCraft.app ------------------------------------------------------------------------------
+# ---- VizardCraft.app ------------------------------------------------------------------------------
 echo "==> assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$WORK/bin/vizcraft" "$APP/Contents/MacOS/VizCraft"
+cp "$WORK/bin/vizardcraft" "$APP/Contents/MacOS/VizardCraft"
 # The service / command-line publisher ships inside the app:
-#   /Applications/VizCraft.app/Contents/MacOS/vizcraft-server serve --port 8080
-cp "$WORK/bin/vizcraft-server" "$APP/Contents/MacOS/vizcraft-server"
-cp "$WORK/bin/vizcraft-mlserve" "$APP/Contents/MacOS/vizcraft-mlserve"
-cp "$WORK/VizCraft.icns" "$APP/Contents/Resources/VizCraft.icns"
+#   /Applications/VizardCraft.app/Contents/MacOS/vizardcraft-server serve --port 8080
+cp "$WORK/bin/vizardcraft-server" "$APP/Contents/MacOS/vizardcraft-server"
+cp "$WORK/bin/vizardcraft-mlserve" "$APP/Contents/MacOS/vizardcraft-mlserve"
+cp "$WORK/VizardCraft.icns" "$APP/Contents/Resources/VizardCraft.icns"
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@BUILD_SHA@/$BUILD_SHA/g" "$HERE/Info.plist.in" >"$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist"
 printf 'APPL????' >"$APP/Contents/PkgInfo"
@@ -113,8 +113,8 @@ sign_args=(--force --sign "$IDENTITY")
 if [[ "$IDENTITY" != "-" ]]; then
   sign_args+=(--options runtime --timestamp)
 fi
-codesign "${sign_args[@]}" "$APP/Contents/MacOS/vizcraft-server"
-codesign "${sign_args[@]}" "$APP/Contents/MacOS/vizcraft-mlserve"
+codesign "${sign_args[@]}" "$APP/Contents/MacOS/vizardcraft-server"
+codesign "${sign_args[@]}" "$APP/Contents/MacOS/vizardcraft-mlserve"
 codesign "${sign_args[@]}" --deep "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 
@@ -122,7 +122,7 @@ codesign --verify --deep --strict --verbose=2 "$APP"
 echo "==> building $DMG"
 STAGE="$WORK/dmg"
 mkdir -p "$STAGE"
-ditto "$APP" "$STAGE/VizCraft.app"
+ditto "$APP" "$STAGE/VizardCraft.app"
 ln -s /Applications "$STAGE/Applications"
 cp "$HERE/README-dmg.txt" "$STAGE/Read me.txt"
 rm -f "$DMG"
@@ -130,7 +130,7 @@ rm -f "$DMG"
 # busy"); retry it, then fall back to makehybrid + convert.
 ok=0
 for attempt in 1 2 3; do
-  if hdiutil create -volname "VizCraft" -srcfolder "$STAGE" -ov -fs HFS+ -format UDZO -imagekey zlib-level=9 "$DMG"; then
+  if hdiutil create -volname "VizardCraft" -srcfolder "$STAGE" -ov -fs HFS+ -format UDZO -imagekey zlib-level=9 "$DMG"; then
     ok=1
     break
   fi
@@ -139,7 +139,7 @@ for attempt in 1 2 3; do
 done
 if [[ "$ok" = 0 ]]; then
   rm -f "$WORK/raw.dmg"
-  hdiutil makehybrid -hfs -hfs-volume-name "VizCraft" -hfs-openfolder "$STAGE" -o "$WORK/raw.dmg" "$STAGE"
+  hdiutil makehybrid -hfs -hfs-volume-name "VizardCraft" -hfs-openfolder "$STAGE" -o "$WORK/raw.dmg" "$STAGE"
   hdiutil convert "$WORK/raw.dmg" -format UDZO -imagekey zlib-level=9 -o "$DMG"
   rm -f "$WORK/raw.dmg"
 fi

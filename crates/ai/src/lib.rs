@@ -1,4 +1,4 @@
-//! VizCraft AI.
+//! VizardCraft AI.
 //!
 //! - [`provider`]: chat providers behind one trait: OpenAI-compatible (OpenAI, Azure, Ollama,
 //!   LM Studio, vLLM, llama.cpp, Groq, OpenRouter, Together, Hugging Face router), Anthropic
@@ -64,15 +64,15 @@ impl std::fmt::Display for AiError {
 
 impl std::error::Error for AiError {}
 
-/// `~/.vizcraft` (or `$VIZCRAFT_HOME` when set — tests and portable installs use it).
+/// `~/.vizardcraft` (or `$VIZARDCRAFT_HOME` when set — tests and portable installs use it).
 pub fn home_dir() -> std::path::PathBuf {
-    if let Ok(h) = std::env::var("VIZCRAFT_HOME")
+    if let Ok(h) = std::env::var("VIZARDCRAFT_HOME")
         && !h.is_empty()
     {
         return std::path::PathBuf::from(h);
     }
     let base = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_else(|_| ".".into());
-    std::path::PathBuf::from(base).join(".vizcraft")
+    std::path::PathBuf::from(base).join(".vizardcraft")
 }
 
 /// Extracts the first balanced JSON object from model text (handles ```json fences and prose).

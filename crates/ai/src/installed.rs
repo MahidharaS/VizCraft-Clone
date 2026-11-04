@@ -229,7 +229,7 @@ pub fn serve_command(i: &Installed) -> Option<String> {
 }
 
 /// Starts the server for an installed model in the background (detached; it keeps running after
-/// VizCraft quits). Returns the OpenAI-compatible base URL to use.
+/// VizardCraft quits). Returns the OpenAI-compatible base URL to use.
 pub fn start_server(i: &Installed) -> Result<String, String> {
     let spawn = |bin: &str, args: &[&str]| -> Result<(), String> {
         let path = find_bin(bin).ok_or_else(|| format!("`{bin}` isn't installed (or not on PATH)."))?;

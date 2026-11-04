@@ -1,9 +1,9 @@
 //! End-to-end tests of the data model on a small star schema.
 
-use vizcraft_datamodel::dates::ymd;
-use vizcraft_datamodel::pivot::{PivotSpec, layout};
-use vizcraft_datamodel::store::Table;
-use vizcraft_datamodel::{CrossFilter, Model, Value};
+use vizardcraft_datamodel::dates::ymd;
+use vizardcraft_datamodel::pivot::{PivotSpec, layout};
+use vizardcraft_datamodel::store::Table;
+use vizardcraft_datamodel::{CrossFilter, Model, Value};
 
 fn n(x: f64) -> Value {
     Value::Number(x)
@@ -57,7 +57,7 @@ fn model() -> Model {
     let end = ymd(2026, 12, 31).unwrap() as i64;
     let mut cal = Vec::new();
     for s in start..=end {
-        let dt = vizcraft_datamodel::dates::to_date(s as f64).unwrap();
+        let dt = vizardcraft_datamodel::dates::to_date(s as f64).unwrap();
         use chrono::Datelike;
         cal.push(vec![n(s as f64), n(dt.year() as f64), n(dt.month() as f64)]);
     }

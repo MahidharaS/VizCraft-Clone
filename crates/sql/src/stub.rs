@@ -1,14 +1,14 @@
-//! The engine when VizCraft is built without the `duckdb` feature: everything reports that SQL
+//! The engine when VizardCraft is built without the `duckdb` feature: everything reports that SQL
 //! isn't available.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use vizcraft_core::build::TableData;
+use vizardcraft_core::build::TableData;
 
 use crate::{CatalogObject, QueryResult, Result, StatementOutput};
 
-pub const UNAVAILABLE: &str = "This build of VizCraft has no SQL engine (rebuild with the `duckdb` feature).";
+pub const UNAVAILABLE: &str = "This build of VizardCraft has no SQL engine (rebuild with the `duckdb` feature).";
 
 pub struct Engine {
     warehouse: Option<PathBuf>,

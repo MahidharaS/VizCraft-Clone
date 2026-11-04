@@ -2,7 +2,7 @@
 
 use quick_xml::Reader;
 use quick_xml::events::Event;
-use vizcraft_query::{Error, Record, Result, Table, Value};
+use vizardcraft_query::{Error, Record, Result, Table, Value};
 
 /// A parsed element.
 #[derive(Clone, Debug, Default)]

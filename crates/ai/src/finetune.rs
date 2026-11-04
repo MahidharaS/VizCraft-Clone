@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use crate::brain::{Event, EventKind, FieldSig};
 use crate::brain::learners::CHART_CLASSES;
 
-const SYSTEM: &str = "You are the VizCraft assistant of one specific user. Follow their habits.";
+const SYSTEM: &str = "You are the VizardCraft assistant of one specific user. Follow their habits.";
 
 fn fields_text(fields: &[FieldSig]) -> String {
     fields.iter().map(|f| format!("{} ({})", f.name, f.ty)).collect::<Vec<_>>().join(", ")
@@ -66,17 +66,17 @@ pub fn decision_examples(events: &[Event]) -> Vec<Value> {
 }
 
 pub const LORA_SCRIPT: &str = r#"#!/usr/bin/env python3
-"""LoRA-tune a small open model on your VizCraft habits (exported by VizCraft: AI > Personal brain > Fine-tune export).
+"""LoRA-tune a small open model on your VizardCraft habits (exported by VizardCraft: AI > Personal brain > Fine-tune export).
 
     pip install "transformers>=4.46" "peft>=0.13" "datasets>=3" accelerate
-    python finetune_lora.py --data sft.jsonl --base Qwen/Qwen2.5-0.5B-Instruct --out vizcraft-me
+    python finetune_lora.py --data sft.jsonl --base Qwen/Qwen2.5-0.5B-Instruct --out vizardcraft-me
 
 Then merge and serve locally, e.g. with Ollama:
-    python finetune_lora.py --merge --base Qwen/Qwen2.5-0.5B-Instruct --out vizcraft-me
-    # convert with llama.cpp:  python convert_hf_to_gguf.py vizcraft-me-merged --outfile vizcraft-me.gguf
-    # Modelfile:  FROM ./vizcraft-me.gguf
-    ollama create vizcraft-me -f Modelfile
-and pick provider "Ollama", model "vizcraft-me" in VizCraft's AI settings.
+    python finetune_lora.py --merge --base Qwen/Qwen2.5-0.5B-Instruct --out vizardcraft-me
+    # convert with llama.cpp:  python convert_hf_to_gguf.py vizardcraft-me-merged --outfile vizardcraft-me.gguf
+    # Modelfile:  FROM ./vizardcraft-me.gguf
+    ollama create vizardcraft-me -f Modelfile
+and pick provider "Ollama", model "vizardcraft-me" in VizardCraft's AI settings.
 
 Decision models: decisions.jsonl holds typed choices (state, question, options, answer). It can
 train a decision head in the style of Open-Jev-2B / -9B (LoRA over Qwen with a single-position
@@ -89,7 +89,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="sft.jsonl")
     ap.add_argument("--base", default="Qwen/Qwen2.5-0.5B-Instruct")
-    ap.add_argument("--out", default="vizcraft-me")
+    ap.add_argument("--out", default="vizardcraft-me")
     ap.add_argument("--epochs", type=float, default=3)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--rank", type=int, default=16)
@@ -149,7 +149,7 @@ mod tests {
             Event::now(EventKind::Measure { name: "Margin".into(), dax: "DIVIDE([P], [S])".into(), format: "0%".into() }),
             Event::now(EventKind::Suggestion { arm: "chart".into(), id: "chart:line".into(), accepted: true }),
         ];
-        let dir = std::env::temp_dir().join(format!("vizcraft-ft-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vizardcraft-ft-{}", std::process::id()));
         let (a, b) = export(&ev, &dir).unwrap();
         assert_eq!((a, b), (2, 2));
         let first: Value = serde_json::from_str(std::fs::read_to_string(dir.join("sft.jsonl")).unwrap().lines().next().unwrap()).unwrap();

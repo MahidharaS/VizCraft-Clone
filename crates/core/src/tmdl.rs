@@ -127,7 +127,7 @@ fn col_type(built: Option<&Built>, table: &str, column: &str) -> ColType {
     }
     // Calculated columns / tables: from the model's data.
     match b.model.table(table).and_then(|t| t.column_index(column).and_then(|i| t.column(i))).map(|c| c.data_type()) {
-        Some(vizcraft_datamodel::store::DataType::Number) => {
+        Some(vizardcraft_datamodel::store::DataType::Number) => {
             let all_int = b
                 .model
                 .table(table)
@@ -135,8 +135,8 @@ fn col_type(built: Option<&Built>, table: &str, column: &str) -> ColType {
                 .is_some_and(|c| (0..c.cardinality() as u32).all(|id| c.dict_value(id).as_number().is_none_or(|x| x.fract() == 0.0)));
             if all_int { ColType::Integer } else { ColType::Number }
         }
-        Some(vizcraft_datamodel::store::DataType::Boolean) => ColType::Bool,
-        Some(vizcraft_datamodel::store::DataType::Text) => ColType::Text,
+        Some(vizardcraft_datamodel::store::DataType::Boolean) => ColType::Bool,
+        Some(vizardcraft_datamodel::store::DataType::Text) => ColType::Text,
         _ => ColType::Any,
     }
 }
@@ -260,7 +260,7 @@ fn write_partition(out: &mut String, p: &Project, t: &ModelTable, ind: usize) {
                 _ => String::new(),
             };
             out.push_str(&format!("{}source = {src}\n", tabs(ind + 1)));
-            out.push_str(&format!("{}annotation VizCraft.Parameter = {}\n", tabs(ind + 1), quote(name)));
+            out.push_str(&format!("{}annotation VizardCraft.Parameter = {}\n", tabs(ind + 1), quote(name)));
         }
         TableSource::Sheet(s) => {
             out.push_str(&format!("{}partition {} = entity\n", tabs(ind), quote(&t.name)));
@@ -278,7 +278,7 @@ fn write_partition(out: &mut String, p: &Project, t: &ModelTable, ind: usize) {
 }
 
 fn field_dax(f: &FieldRef) -> String {
-    let q = vizcraft_datamodel::model::quote_table;
+    let q = vizardcraft_datamodel::model::quote_table;
     match f {
         FieldRef::Column { table, column } => format!("{}[{column}]", q(table)),
         FieldRef::Measure { name, .. } => format!("[{name}]"),
@@ -395,7 +395,7 @@ fn write_expressions(out: &mut String, p: &Project, ind: usize) {
             m_type(&prm.kind)
         ));
     }
-    for q in p.queries.queries.iter().filter(|q| q.load == vizcraft_query::steps::LoadTo::None) {
+    for q in p.queries.queries.iter().filter(|q| q.load == vizardcraft_query::steps::LoadTo::None) {
         desc(out, &q.description, ind);
         out.push_str(&format!("{}expression {} =\n", tabs(ind), quote(&q.name)));
         block(out, &q.m, ind + 2);
@@ -941,7 +941,7 @@ pub fn apply_with(p: &mut Project, built: Option<&Built>, script: &str) -> Resul
         for tp in rn.kids("tablepermission") {
             let f = tp.expr.clone().unwrap_or_default();
             if !f.trim().is_empty()
-                && let Err(e) = vizcraft_datamodel::dax::parse(&f)
+                && let Err(e) = vizardcraft_datamodel::dax::parse(&f)
             {
                 errors.push(format!("Line {}: role '{}', table {}: {e}", tp.line, rn.name, tp.name));
             }
@@ -1007,7 +1007,7 @@ pub fn apply_with(p: &mut Project, built: Option<&Built>, script: &str) -> Resul
                     }
                 }
                 None => {
-                    q.queries.parameters.push(vizcraft_query::steps::Parameter {
+                    q.queries.parameters.push(vizardcraft_query::steps::Parameter {
                         name: en.name.clone(),
                         kind: kind_label.into(),
                         value: value.clone(),
@@ -1026,10 +1026,10 @@ pub fn apply_with(p: &mut Project, built: Option<&Built>, script: &str) -> Resul
                     }
                 }
                 None => {
-                    q.queries.queries.push(vizcraft_query::steps::QueryDef {
+                    q.queries.queries.push(vizardcraft_query::steps::QueryDef {
                         name: en.name.clone(),
                         m: text.trim().to_string(),
-                        load: vizcraft_query::steps::LoadTo::None,
+                        load: vizardcraft_query::steps::LoadTo::None,
                         loaded_table: None,
                         group: None,
                         description: en.description.clone(),
@@ -1075,7 +1075,7 @@ fn apply_table(q: &mut Project, built: Option<&Built>, tn: &Node, partial: bool,
     if !exists {
         match partition.map(|pn| (pn.expr.as_deref().unwrap_or("").trim().to_ascii_lowercase(), pn.prop("source").unwrap_or("").to_string())) {
             Some((kind, src)) if kind == "calculated" && !src.trim().is_empty() => {
-                if let Err(e) = vizcraft_datamodel::dax::parse(&src) {
+                if let Err(e) = vizardcraft_datamodel::dax::parse(&src) {
                     errors.push(format!("Line {}: table '{tname}': {e}", tn.line));
                     return;
                 }
@@ -1083,10 +1083,10 @@ fn apply_table(q: &mut Project, built: Option<&Built>, tn: &Node, partial: bool,
                 log.push(format!("Created calculated table '{tname}'"));
             }
             Some((kind, src)) if kind == "m" && !src.trim().is_empty() => {
-                q.queries.queries.push(vizcraft_query::steps::QueryDef {
+                q.queries.queries.push(vizardcraft_query::steps::QueryDef {
                     name: tname.clone(),
                     m: src.trim().to_string(),
-                    load: vizcraft_query::steps::LoadTo::Model,
+                    load: vizardcraft_query::steps::LoadTo::Model,
                     loaded_table: None,
                     group: None,
                     description: tn.description.clone(),
@@ -1135,7 +1135,7 @@ fn apply_table(q: &mut Project, built: Option<&Built>, tn: &Node, partial: bool,
             }
             (TableSource::Calculated(old), "calculated") => {
                 if old.trim() != src && !src.is_empty() {
-                    match vizcraft_datamodel::dax::parse(&src) {
+                    match vizardcraft_datamodel::dax::parse(&src) {
                         Ok(_) => {
                             if let Some(t) = q.model.tables.get_mut(ti) {
                                 t.source = TableSource::Calculated(src.clone());
@@ -1159,7 +1159,7 @@ fn apply_table(q: &mut Project, built: Option<&Built>, tn: &Node, partial: bool,
     // Measures.
     for mn in tn.kids("measure") {
         let expr = mn.expr.clone().unwrap_or_default();
-        if let Err(e) = vizcraft_datamodel::dax::parse(&expr) {
+        if let Err(e) = vizardcraft_datamodel::dax::parse(&expr) {
             errors.push(format!("Line {}: measure [{}]: {e}", mn.line, mn.name));
             continue;
         }
@@ -1205,7 +1205,7 @@ fn apply_table(q: &mut Project, built: Option<&Built>, tn: &Node, partial: bool,
     let mut calc_seen = Vec::new();
     for cn in tn.kids("column") {
         if let Some(expr) = &cn.expr {
-            if let Err(e) = vizcraft_datamodel::dax::parse(expr) {
+            if let Err(e) = vizardcraft_datamodel::dax::parse(expr) {
                 errors.push(format!("Line {}: column [{}]: {e}", cn.line, cn.name));
                 continue;
             }
@@ -1387,7 +1387,7 @@ mod tests {
 
     fn sample() -> (Project, Built) {
         let p = crate::sample::sales();
-        let b = crate::build::build(&p, &vizcraft_query::NoHost, &Default::default());
+        let b = crate::build::build(&p, &vizardcraft_query::NoHost, &Default::default());
         (p, b)
     }
 
@@ -1412,7 +1412,7 @@ mod tests {
         p.model.roles.push(Role { name: "East".into(), filters: vec![("Store".into(), "[Region] = \"East\"".into())], members: vec!["ann@contoso.com".into()] });
         p.model.measures.push(Measure { table: "Sales".into(), name: "Multi".into(), expression: "VAR x = [Units]\nRETURN\n    x * 2".into(), description: "Two lines\nof notes".into(), display_folder: "KPIs".into(), ..Measure::default() });
         p.model.calculated_columns.push(CalcColumn { table: "Sales".into(), name: "Line Total".into(), expression: "Sales[Quantity] * Sales[Unit Price]".into(), origin: String::new() });
-        p.queries.parameters.push(vizcraft_query::steps::Parameter { name: "Server".into(), kind: "Text".into(), value: "\"localhost\"".into(), description: String::new(), suggestions: vec![] });
+        p.queries.parameters.push(vizardcraft_query::steps::Parameter { name: "Server".into(), kind: "Text".into(), value: "\"localhost\"".into(), description: String::new(), suggestions: vec![] });
         let b = crate::build::rebuild(&p, &b, &Default::default());
         let s = write(&p, &b);
         let before = p.clone();

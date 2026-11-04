@@ -1,12 +1,12 @@
 //! `Python.Execute(script, [dataset = table])`: runs a Python script (the interpreter in
-//! `VIZCRAFT_PYTHON`, else `python3`). Tables passed in become pandas DataFrames (or lists of
+//! `VIZARDCRAFT_PYTHON`, else `python3`). Tables passed in become pandas DataFrames (or lists of
 //! dicts without pandas); every DataFrame (or list of dicts) the script leaves in a variable
 //! comes back as a row `Name`, `Value` — as in Power BI.
 
 use std::process::Command;
 
-use vizcraft_query::funcs::source::csv_table;
-use vizcraft_query::{Error, MType, Result, Table, Value};
+use vizardcraft_query::funcs::source::csv_table;
+use vizardcraft_query::{Error, MType, Result, Table, Value};
 
 use crate::Args;
 
@@ -52,7 +52,7 @@ with open(os.path.join(_vc_out, '_names.txt'), 'w', encoding='utf-8') as f:
 
 pub fn execute(a: &Args) -> Result<Table> {
     let script = a.pos(0).unwrap_or_default();
-    let dir = std::env::temp_dir().join(format!("vizcraft-py-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)));
+    let dir = std::env::temp_dir().join(format!("vizardcraft-py-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)));
     std::fs::create_dir_all(&dir).map_err(|e| Error::Eval(format!("Python: {e}")))?;
     let mut src = String::from(PRELUDE);
     for (k, csv) in &a.options {
@@ -69,7 +69,7 @@ pub fn execute(a: &Args) -> Result<Table> {
     src.push_str(EPILOGUE);
     let file = dir.join("script.py");
     std::fs::write(&file, src).map_err(|e| Error::Eval(format!("Python: {e}")))?;
-    let exe = std::env::var("VIZCRAFT_PYTHON").unwrap_or_else(|_| "python3".into());
+    let exe = std::env::var("VIZARDCRAFT_PYTHON").unwrap_or_else(|_| "python3".into());
     let out = Command::new(&exe).arg(&file).env("VC_OUT", &dir).current_dir(&dir).output().map_err(|e| Error::Eval(format!("DataSource.Error: Python couldn't start ({exe}): {e}")))?;
     if !out.status.success() {
         let _ = std::fs::remove_dir_all(&dir);

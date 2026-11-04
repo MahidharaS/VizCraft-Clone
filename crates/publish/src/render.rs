@@ -1,6 +1,6 @@
 //! Rendering report elements — visuals, shapes, text boxes, images and buttons — the same way
 //! everywhere: as a [`Scene`] (for renderers that paint scenes, like the desktop) and as SVG
-//! (the web viewer, thumbnails, `vizcraft-server render`, SVG export).
+//! (the web viewer, thumbnails, `vizardcraft-server render`, SVG export).
 //!
 //! [`render_element`] composes the element container ([`chrome`]) with its content at the right
 //! offset. [`element_svg`] does the same as a standalone `<svg>` and adds what scenes can't
@@ -8,16 +8,16 @@
 
 use std::fmt::Write as _;
 
-use vizcraft_core::analytics;
-use vizcraft_core::build::Built;
-use vizcraft_core::charts::{self, RenderOpts, chrome};
-use vizcraft_core::color::{Color, Theme};
-use vizcraft_core::doc::*;
-use vizcraft_core::fx::{self, FxEnv, Props};
-use vizcraft_core::scalar::Scalar;
-use vizcraft_core::scene::{Align, Line, Rect, Scene, Shape, text_width};
-use vizcraft_core::state::{self, Runtime};
-use vizcraft_core::vquery;
+use vizardcraft_core::analytics;
+use vizardcraft_core::build::Built;
+use vizardcraft_core::charts::{self, RenderOpts, chrome};
+use vizardcraft_core::color::{Color, Theme};
+use vizardcraft_core::doc::*;
+use vizardcraft_core::fx::{self, FxEnv, Props};
+use vizardcraft_core::scalar::Scalar;
+use vizardcraft_core::scene::{Align, Line, Rect, Scene, Shape, text_width};
+use vizardcraft_core::state::{self, Runtime};
+use vizardcraft_core::vquery;
 
 /// The font stack published reports use.
 pub const FONT_STACK: &str = "Inter, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif";
@@ -882,7 +882,7 @@ fn navigator(out: &mut String, p: &Project, page: &Page, nav: &str, w: f32, h: f
             (h * 0.36).clamp(9.0, 14.0),
             fg.css(),
             if *on { " font-weight=\"600\"" } else { "" },
-            esc(&vizcraft_core::scene::ellipsize(name, (h * 0.36).clamp(9.0, 14.0), bw - 8.0))
+            esc(&vizardcraft_core::scene::ellipsize(name, (h * 0.36).clamp(9.0, 14.0), bw - 8.0))
         );
     }
 }

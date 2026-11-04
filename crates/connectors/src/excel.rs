@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use calamine::{Data, Range, Reader, SheetVisible, Sheets, open_workbook_auto_from_rs};
-use vizcraft_query::{Error, MType, Result, Table, Value};
+use vizardcraft_query::{Error, MType, Result, Table, Value};
 
 fn cell(d: &Data) -> Value {
     match d {

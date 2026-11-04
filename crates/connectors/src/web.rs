@@ -6,8 +6,8 @@
 
 use std::time::Duration;
 
-use vizcraft_query::funcs::source::json_value;
-use vizcraft_query::{Error, Record, Result, Table, Value};
+use vizardcraft_query::funcs::source::json_value;
+use vizardcraft_query::{Error, Record, Result, Table, Value};
 
 use crate::Args;
 
@@ -52,7 +52,7 @@ fn get_with(url: &str, extra: &[(&str, &str)]) -> Result<Vec<u8>> {
     if !(u.starts_with("http://") || u.starts_with("https://")) {
         return Err(Error::Eval(format!("DataSource.Error: '{u}' isn't a web address (it should start with https://).")));
     }
-    let mut req = agent().get(&u).header("User-Agent", "VizCraft/0.1 (Power Query)");
+    let mut req = agent().get(&u).header("User-Agent", "VizardCraft/0.1 (Power Query)");
     for (k, v) in &headers {
         req = req.header(k.as_str(), v.as_str());
     }

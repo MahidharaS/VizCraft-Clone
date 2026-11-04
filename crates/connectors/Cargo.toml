@@ -1,16 +1,16 @@
 [package]
-name = "vizcraft-connectors"
+name = "vizardcraft-connectors"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "VizCraft data connectors: files, folders, Excel, web, databases (the Power Query host)"
+description = "VizardCraft data connectors: files, folders, Excel, web, databases (the Power Query host)"
 
 [lints]
 workspace = true
 
 [dependencies]
-vizcraft-query = { workspace = true }
-vizcraft-core = { workspace = true }
+vizardcraft-query = { workspace = true }
+vizardcraft-core = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 calamine = "0.38"

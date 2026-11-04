@@ -44,7 +44,7 @@ pub struct Context {
 
 /// `'Table'[Column]`.
 pub fn col_ref(table: &str, column: &str) -> String {
-    format!("{}[{}]", vizcraft_datamodel::model::quote_table(table), column.replace(']', "]]"))
+    format!("{}[{}]", vizardcraft_datamodel::model::quote_table(table), column.replace(']', "]]"))
 }
 
 /// The model column a categorical field groups by.
@@ -198,7 +198,7 @@ pub fn today_serial() -> f64 {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let today = chrono::Local::now().date_naive();
-        vizcraft_datamodel::dates::to_serial(today).unwrap_or(45000.0)
+        vizardcraft_datamodel::dates::to_serial(today).unwrap_or(45000.0)
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -417,7 +417,7 @@ pub fn context_for(p: &Project, built: &Built, rt: &Runtime, page: &Page, elemen
     if let Some(role) = rt.role.as_ref().and_then(|r| p.model.roles.iter().find(|x| &x.name == r)) {
         for (t, dax) in &role.filters {
             if !dax.trim().is_empty() {
-                cx.filters.push(format!("FILTER({}, {dax})", vizcraft_datamodel::model::quote_table(t)));
+                cx.filters.push(format!("FILTER({}, {dax})", vizardcraft_datamodel::model::quote_table(t)));
             }
         }
     }

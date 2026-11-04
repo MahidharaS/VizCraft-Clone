@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use vizcraft_datamodel::Value as DmValue;
+use vizardcraft_datamodel::Value as DmValue;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]

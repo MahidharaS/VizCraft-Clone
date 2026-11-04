@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=VizardCraft
+GenericName=Business Intelligence
+Comment=Build interactive reports and dashboards from your data
+Exec=vizardcraft %f
+TryExec=vizardcraft
+Icon=com.vizardcraft.app
+Terminal=false
+StartupNotify=true
+StartupWMClass=vizardcraft
+Categories=Office;Development;
+Keywords=bi;dashboard;report;chart;dax;power query;analytics;

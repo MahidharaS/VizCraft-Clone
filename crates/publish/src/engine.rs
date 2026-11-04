@@ -9,10 +9,10 @@ use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
-use vizcraft_core::build::{self, Built, TableData};
-use vizcraft_core::doc::*;
-use vizcraft_core::scalar::Scalar;
-use vizcraft_core::state::{self, Runtime};
+use vizardcraft_core::build::{self, Built, TableData};
+use vizardcraft_core::doc::*;
+use vizardcraft_core::scalar::Scalar;
+use vizardcraft_core::state::{self, Runtime};
 
 use crate::render::{self, ElementOut, PHONE_WIDTH};
 

@@ -344,19 +344,19 @@ fn spec_of(w: &StudioWidget) -> LearnerSpec {
 
 fn period_key(serial: f64, period: &str) -> Option<(String, f64)> {
     use chrono::Datelike;
-    let d = vizcraft_datamodel::dates::to_date(serial.floor())?;
+    let d = vizardcraft_datamodel::dates::to_date(serial.floor())?;
     Some(match period {
         "day" => (d.format("%Y-%m-%d").to_string(), serial.floor()),
         "week" => {
             let monday = d - chrono::Duration::days(d.weekday().num_days_from_monday() as i64);
-            (format!("{} W{:02}", monday.iso_week().year(), monday.iso_week().week()), vizcraft_datamodel::dates::to_serial(monday)?)
+            (format!("{} W{:02}", monday.iso_week().year(), monday.iso_week().week()), vizardcraft_datamodel::dates::to_serial(monday)?)
         }
         "quarter" => {
             let q = (d.month() - 1) / 3 + 1;
-            (format!("{}-Q{q}", d.year()), vizcraft_datamodel::dates::ymd(d.year(), (q - 1) * 3 + 1, 1)?)
+            (format!("{}-Q{q}", d.year()), vizardcraft_datamodel::dates::ymd(d.year(), (q - 1) * 3 + 1, 1)?)
         }
-        "year" => (d.year().to_string(), vizcraft_datamodel::dates::ymd(d.year(), 1, 1)?),
-        _ => (d.format("%Y-%m").to_string(), vizcraft_datamodel::dates::ymd(d.year(), d.month(), 1)?),
+        "year" => (d.year().to_string(), vizardcraft_datamodel::dates::ymd(d.year(), 1, 1)?),
+        _ => (d.format("%Y-%m").to_string(), vizardcraft_datamodel::dates::ymd(d.year(), d.month(), 1)?),
     })
 }
 
@@ -366,7 +366,7 @@ fn to_serial(v: &Scalar) -> Option<f64> {
         Scalar::Text(s) => {
             let s = s.trim();
             let d = chrono::NaiveDate::parse_from_str(s.get(..10).unwrap_or(s), "%Y-%m-%d").ok().or_else(|| chrono::NaiveDate::parse_from_str(s, "%d/%m/%Y").ok())?;
-            vizcraft_datamodel::dates::to_serial(d)
+            vizardcraft_datamodel::dates::to_serial(d)
         }
         _ => None,
     }

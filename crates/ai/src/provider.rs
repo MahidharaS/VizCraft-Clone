@@ -286,7 +286,7 @@ impl ProviderConfig {
 
     pub fn key_source(&self) -> &'static str {
         if !self.api_key.trim().is_empty() {
-            "stored in ~/.vizcraft/ai.json"
+            "stored in ~/.vizardcraft/ai.json"
         } else if self.kind.env_key().and_then(|k| std::env::var(k).ok()).is_some_and(|v| !v.is_empty()) {
             "from environment"
         } else if self.kind.needs_key() {
@@ -334,7 +334,7 @@ impl ChatProvider for HttpProvider {
                         h.push(("Authorization".to_string(), format!("Bearer {key}")));
                     }
                     if self.cfg.kind == ProviderKind::OpenRouter {
-                        h.push(("X-Title".to_string(), "VizCraft".to_string()));
+                        h.push(("X-Title".to_string(), "VizardCraft".to_string()));
                     }
                     (format!("{base}/chat/completions"), h)
                 };
@@ -646,7 +646,7 @@ mod tests {
         let mut a = Message::assistant("");
         a.tool_calls.push(call.clone());
         ChatRequest {
-            messages: vec![Message::system("You are VizCraft."), Message::user("Total sales?"), a, Message::tool(&call, "{\"rows\":[[1]]}")],
+            messages: vec![Message::system("You are VizardCraft."), Message::user("Total sales?"), a, Message::tool(&call, "{\"rows\":[[1]]}")],
             tools: vec![tool()],
             temperature: Some(0.1),
             max_tokens: 100,
@@ -701,7 +701,7 @@ mod tests {
         assert!(rec[0].headers.iter().any(|(k, v)| k == "x-api-key" && v == "ak"));
         assert!(rec[0].headers.iter().any(|(k, _)| k == "anthropic-version"));
         let body: Value = serde_json::from_str(&rec[0].body).expect("json");
-        assert_eq!(body["system"], "You are VizCraft.");
+        assert_eq!(body["system"], "You are VizardCraft.");
         assert_eq!(body["model"], "claude-sonnet-5-5");
         assert_eq!(body["tools"][0]["input_schema"]["type"], "object");
         assert_eq!(body["messages"][1]["content"][0]["type"], "tool_use");
@@ -724,7 +724,7 @@ mod tests {
         let rec = m.received.lock().expect("lock");
         assert_eq!(rec[0].path, "/v1beta/models/gemini-test:generateContent");
         let body: Value = serde_json::from_str(&rec[0].body).expect("json");
-        assert_eq!(body["systemInstruction"]["parts"][0]["text"], "You are VizCraft.");
+        assert_eq!(body["systemInstruction"]["parts"][0]["text"], "You are VizardCraft.");
         assert_eq!(body["contents"][1]["role"], "model");
         assert_eq!(body["contents"][2]["parts"][0]["functionResponse"]["name"], "run_dax");
         assert!(body["tools"][0]["functionDeclarations"][0]["parameters"].get("required").is_some());

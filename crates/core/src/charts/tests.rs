@@ -1,6 +1,6 @@
 //! Renders every visual kind against the Retail sample: no panics, non-empty scenes. The
-//! ignored `gallery` test writes SVG contact sheets to /tmp/vizcraft-charts for eyeballing
-//! (`cargo test -p vizcraft-core gallery -- --ignored`, then `convert x.svg x.png`).
+//! ignored `gallery` test writes SVG contact sheets to /tmp/vizardcraft-charts for eyeballing
+//! (`cargo test -p vizardcraft-core gallery -- --ignored`, then `convert x.svg x.png`).
 
 use std::collections::BTreeMap;
 
@@ -108,7 +108,7 @@ pub fn cases() -> Vec<(String, VisualSpec, Vec<(&'static str, Prop)>)> {
 
 fn setup() -> (Project, Built) {
     let p = crate::sample::sales();
-    let b = build::build(&p, &vizcraft_query::NoHost, &BTreeMap::new());
+    let b = build::build(&p, &vizardcraft_query::NoHost, &BTreeMap::new());
     (p, b)
 }
 
@@ -218,10 +218,10 @@ fn debug_dates() {
 #[ignore]
 fn gallery() {
     let (p, b) = setup();
-    let dir = std::path::Path::new("/tmp/vizcraft-charts");
+    let dir = std::path::Path::new("/tmp/vizardcraft-charts");
     let _ = std::fs::create_dir_all(dir);
     let only = std::env::var("VIZ_ONLY").unwrap_or_default().to_lowercase();
-    let theme_name = std::env::var("VIZ_THEME").unwrap_or_else(|_| "VizCraft".into());
+    let theme_name = std::env::var("VIZ_THEME").unwrap_or_else(|_| "VizardCraft".into());
     let theme = Theme::by_name(&theme_name).unwrap_or_default();
     let (w, h) = (480.0, 310.0);
     let cases: Vec<_> = cases().into_iter().filter(|(n, _, _)| only.is_empty() || n.to_lowercase().contains(&only)).collect();

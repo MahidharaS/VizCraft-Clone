@@ -3,20 +3,20 @@
 use super::*;
 
 fn tmp(name: &str) -> std::path::PathBuf {
-    let d = std::env::temp_dir().join(format!("vizcraft-conn-{}-{}", std::process::id(), name));
+    let d = std::env::temp_dir().join(format!("vizardcraft-conn-{}-{}", std::process::id(), name));
     let _ = std::fs::create_dir_all(&d);
     d
 }
 
 fn eval(m: &str) -> Table {
-    match vizcraft_query::evaluate(m, &DesktopHost) {
+    match vizardcraft_query::evaluate(m, &DesktopHost) {
         Ok(Value::Table(t)) => (*t).clone(),
         other => panic!("not a table: {other:?}"),
     }
 }
 
 fn q(p: &std::path::Path) -> String {
-    vizcraft_query::value::quote_text(&p.to_string_lossy())
+    vizardcraft_query::value::quote_text(&p.to_string_lossy())
 }
 
 #[test]

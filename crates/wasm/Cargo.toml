@@ -1,9 +1,9 @@
 [package]
-name = "vizcraft-wasm"
+name = "vizardcraft-wasm"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "The VizCraft engine for the web viewer: core compiled to wasm32-unknown-unknown with a small C-ABI JSON API"
+description = "The VizardCraft engine for the web viewer: core compiled to wasm32-unknown-unknown with a small C-ABI JSON API"
 publish = false
 
 [lib]
@@ -18,10 +18,10 @@ dbg_macro = "warn"
 todo = "warn"
 
 [dependencies]
-vizcraft-core = { workspace = true }
-vizcraft-publish = { workspace = true }
+vizardcraft-core = { workspace = true }
+vizardcraft-publish = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
-vizcraft-query = { workspace = true }
+vizardcraft-query = { workspace = true }

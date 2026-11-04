@@ -1,4 +1,4 @@
-//! VizCraft SQL: an embedded analytical SQL engine (DuckDB) inside the BI studio.
+//! VizardCraft SQL: an embedded analytical SQL engine (DuckDB) inside the BI studio.
 //!
 //! * [`Engine`] wraps an in-process DuckDB database. Every table loaded into the semantic model
 //!   is registered as a SQL table (typed: dates become `DATE`, date/times `TIMESTAMP`, …); files
@@ -27,8 +27,8 @@ mod stub;
 #[cfg(not(feature = "duckdb"))]
 pub use stub::Engine;
 
-use vizcraft_core::build::{ColType, TableData};
-use vizcraft_core::scalar::Scalar;
+use vizardcraft_core::build::{ColType, TableData};
+use vizardcraft_core::scalar::Scalar;
 
 /// Days between the spreadsheet epoch (1899-12-30, serial 0) and the Unix epoch.
 pub const UNIX_EPOCH_SERIAL: f64 = 25569.0;
@@ -65,8 +65,8 @@ impl QueryResult {
     }
 
     /// As a Power Query table, with dates as M dates.
-    pub fn to_m(&self) -> vizcraft_query::Table {
-        use vizcraft_query::{MType, Value};
+    pub fn to_m(&self) -> vizardcraft_query::Table {
+        use vizardcraft_query::{MType, Value};
         let types: Vec<MType> = self
             .col_types
             .iter()
@@ -99,7 +99,7 @@ impl QueryResult {
                     .collect()
             })
             .collect();
-        let mut t = vizcraft_query::Table::new(self.columns.clone(), rows);
+        let mut t = vizardcraft_query::Table::new(self.columns.clone(), rows);
         t.types = types;
         t
     }
@@ -156,7 +156,7 @@ impl QueryResult {
     /// Sorts rows by a column.
     pub fn sort_by(&mut self, col: usize, descending: bool) {
         self.rows.sort_by(|a, b| {
-            let o = vizcraft_core::scalar::compare(a.get(col).unwrap_or(&Scalar::Null), b.get(col).unwrap_or(&Scalar::Null));
+            let o = vizardcraft_core::scalar::compare(a.get(col).unwrap_or(&Scalar::Null), b.get(col).unwrap_or(&Scalar::Null));
             if descending { o.reverse() } else { o }
         });
     }

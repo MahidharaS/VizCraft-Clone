@@ -6,10 +6,10 @@ use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use vizcraft_datamodel::store::Table as DmTable;
-use vizcraft_datamodel::{CrossFilter, Model, Value as DmValue};
-use vizcraft_query::m::eval::Host;
-use vizcraft_query::{MType, Value as MValue};
+use vizardcraft_datamodel::store::Table as DmTable;
+use vizardcraft_datamodel::{CrossFilter, Model, Value as DmValue};
+use vizardcraft_query::m::eval::Host;
+use vizardcraft_query::{MType, Value as MValue};
 
 use crate::doc::*;
 use crate::scalar::Scalar;
@@ -159,7 +159,7 @@ impl TableData {
     }
 
     /// From a Power Query table.
-    pub fn from_m(name: &str, t: &vizcraft_query::Table) -> TableData {
+    pub fn from_m(name: &str, t: &vizardcraft_query::Table) -> TableData {
         let types: Vec<ColType> = (0..t.columns.len())
             .map(|i| match t.types.get(i).copied().unwrap_or(MType::Any) {
                 MType::Text => ColType::Text,
@@ -225,8 +225,8 @@ pub fn scalar_to_m(v: &Scalar) -> MValue {
 
 impl TableData {
     /// As a Power Query table (sheets referenced from queries).
-    pub fn to_m(&self) -> vizcraft_query::Table {
-        let mut t = vizcraft_query::Table::new(self.columns.clone(), self.rows.iter().map(|r| r.iter().map(scalar_to_m).collect()).collect());
+    pub fn to_m(&self) -> vizardcraft_query::Table {
+        let mut t = vizardcraft_query::Table::new(self.columns.clone(), self.rows.iter().map(|r| r.iter().map(scalar_to_m).collect()).collect());
         t.types = self
             .types
             .iter()
@@ -260,25 +260,25 @@ impl<'a> ProjectHost<'a> {
 }
 
 impl Host for ProjectHost<'_> {
-    fn resolve(&self, name: &str) -> Option<vizcraft_query::Result<MValue>> {
+    fn resolve(&self, name: &str) -> Option<vizardcraft_query::Result<MValue>> {
         if self.depth.get() > 40 {
-            return Some(Err(vizcraft_query::Error::Eval(format!("Queries refer to each other in a cycle ({name})."))));
+            return Some(Err(vizardcraft_query::Error::Eval(format!("Queries refer to each other in a cycle ({name})."))));
         }
         if let Some(q) = self.project.queries.query(name) {
             self.depth.set(self.depth.get() + 1);
-            let r = vizcraft_query::evaluate(&q.m, self);
+            let r = vizardcraft_query::evaluate(&q.m, self);
             self.depth.set(self.depth.get().saturating_sub(1));
             return Some(r);
         }
         if let Some(p) = self.project.queries.parameters.iter().find(|p| p.name == name) {
-            return Some(vizcraft_query::evaluate(&p.value, &vizcraft_query::NoHost));
+            return Some(vizardcraft_query::evaluate(&p.value, &vizardcraft_query::NoHost));
         }
         if let Some(s) = self.project.sheet(name) {
             return Some(Ok(MValue::table(crate::sheet::evaluate_with(s, &self.project.sheets).to_m())));
         }
         self.inner.resolve(name)
     }
-    fn current_workbook(&self) -> vizcraft_query::Result<vizcraft_query::Table> {
+    fn current_workbook(&self) -> vizardcraft_query::Result<vizardcraft_query::Table> {
         // The project's data sheets play the part of the workbook's tables.
         let rows = self
             .project
@@ -286,37 +286,37 @@ impl Host for ProjectHost<'_> {
             .iter()
             .map(|s| vec![MValue::table(crate::sheet::evaluate_with(s, &self.project.sheets).to_m()), MValue::text(&s.name)])
             .collect();
-        Ok(vizcraft_query::Table::new(vec!["Content".into(), "Name".into()], rows))
+        Ok(vizardcraft_query::Table::new(vec!["Content".into(), "Name".into()], rows))
     }
-    fn file_contents(&self, path: &str) -> vizcraft_query::Result<Vec<u8>> {
+    fn file_contents(&self, path: &str) -> vizardcraft_query::Result<Vec<u8>> {
         self.inner.file_contents(path)
     }
-    fn excel_workbook(&self, bytes: &[u8], use_headers: bool) -> vizcraft_query::Result<vizcraft_query::Table> {
+    fn excel_workbook(&self, bytes: &[u8], use_headers: bool) -> vizardcraft_query::Result<vizardcraft_query::Table> {
         self.inner.excel_workbook(bytes, use_headers)
     }
-    fn folder_files(&self, path: &str) -> vizcraft_query::Result<vizcraft_query::Table> {
+    fn folder_files(&self, path: &str) -> vizardcraft_query::Result<vizardcraft_query::Table> {
         self.inner.folder_files(path)
     }
-    fn web_contents(&self, url: &str) -> vizcraft_query::Result<Vec<u8>> {
+    fn web_contents(&self, url: &str) -> vizardcraft_query::Result<Vec<u8>> {
         self.inner.web_contents(url)
     }
-    fn database(&self, kind: &str, args: &[String], query: Option<&str>) -> vizcraft_query::Result<vizcraft_query::Table> {
+    fn database(&self, kind: &str, args: &[String], query: Option<&str>) -> vizardcraft_query::Result<vizardcraft_query::Table> {
         self.inner.database(kind, args, query)
     }
-    fn sql(&self, query: &str) -> vizcraft_query::Result<vizcraft_query::Table> {
+    fn sql(&self, query: &str) -> vizardcraft_query::Result<vizardcraft_query::Table> {
         self.inner.sql(query)
     }
 }
 
 /// Evaluates one query to a table.
-pub fn evaluate_query(project: &Project, name: &str, host: &dyn Host) -> Result<vizcraft_query::Table> {
+pub fn evaluate_query(project: &Project, name: &str, host: &dyn Host) -> Result<vizardcraft_query::Table> {
     let q = project.queries.query(name).ok_or_else(|| Error::Msg(format!("There's no query named `{name}`.")))?;
     let ph = ProjectHost::new(project, host);
-    match vizcraft_query::evaluate(&q.m, &ph)? {
+    match vizardcraft_query::evaluate(&q.m, &ph)? {
         MValue::Table(t) => Ok((*t).clone()),
-        MValue::List(l) => Ok(vizcraft_query::Table::new(vec!["Value".into()], l.iter().map(|v| vec![v.clone()]).collect())),
-        MValue::Record(r) => Ok(vizcraft_query::Table::new(r.names.clone(), vec![r.values.clone()])),
-        other => Ok(vizcraft_query::Table::new(vec![name.to_string()], vec![vec![other]])),
+        MValue::List(l) => Ok(vizardcraft_query::Table::new(vec!["Value".into()], l.iter().map(|v| vec![v.clone()]).collect())),
+        MValue::Record(r) => Ok(vizardcraft_query::Table::new(r.names.clone(), vec![r.values.clone()])),
+        other => Ok(vizardcraft_query::Table::new(vec![name.to_string()], vec![vec![other]])),
     }
 }
 
@@ -354,7 +354,7 @@ pub fn date_level_column(column: &str, level: &str) -> String {
 pub fn sync_model_tables(p: &mut Project) {
     let mut wanted: Vec<(String, TableSource)> = Vec::new();
     for q in &p.queries.queries {
-        if q.load != vizcraft_query::steps::LoadTo::None {
+        if q.load != vizardcraft_query::steps::LoadTo::None {
             wanted.push((q.name.clone(), TableSource::Query(q.name.clone())));
         }
     }
@@ -556,7 +556,7 @@ pub fn build_model(p: &Project, tables: &BTreeMap<String, Rc<TableData>>, params
                 }
                 for (ri, row) in rows.iter_mut().enumerate() {
                     let serial = d.rows.get(ri).and_then(|r| r.get(ci)).and_then(|v| v.as_f64());
-                    let parts = serial.and_then(|s| vizcraft_datamodel::dates::to_date(s.floor()));
+                    let parts = serial.and_then(|s| vizardcraft_datamodel::dates::to_date(s.floor()));
                     match parts {
                         Some(date) => {
                             use chrono::Datelike;
@@ -613,7 +613,7 @@ pub fn build_model(p: &Project, tables: &BTreeMap<String, Rc<TableData>>, params
     // Parameter measures.
     for prm in &p.model.parameters {
         if let ParameterKind::WhatIf { default, .. } = prm.kind {
-            let q = vizcraft_datamodel::model::quote_table(&prm.name);
+            let q = vizardcraft_datamodel::model::quote_table(&prm.name);
             let e = format!("SELECTEDVALUE({q}[{}], {default})", prm.name);
             if let Err(err) = m.add_measure(&prm.name, &format!("{} Value", prm.name), &e, None) {
                 errors.push((prm.name.clone(), err.to_string()));

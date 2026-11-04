@@ -169,7 +169,7 @@ pub fn handle(models: &[RegisteredModel], method: &str, path: &str, body: &str) 
     };
     match (method, parts.as_slice()) {
         ("OPTIONS", _) => Response { status: 204, body: String::new(), content_type: "text/plain" },
-        ("GET", []) => json_resp(200, json!({"service": "VizCraft model server", "endpoints": ["GET /health", "GET /models", "GET /models/<name>/schema", "POST /models/<name>/predict", "POST /models/<name>/versions/<v>/predict"]})),
+        ("GET", []) => json_resp(200, json!({"service": "VizardCraft model server", "endpoints": ["GET /health", "GET /models", "GET /models/<name>/schema", "POST /models/<name>/predict", "POST /models/<name>/versions/<v>/predict"]})),
         ("GET", ["health"]) => json_resp(200, json!({"status": "ok", "models": summary(models).as_array().map(|a| a.len()).unwrap_or(0)})),
         ("GET", ["models"]) => json_resp(200, summary(models)),
         ("GET", ["models", name]) => match find(name, None) {

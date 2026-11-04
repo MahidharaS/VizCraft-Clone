@@ -1,16 +1,16 @@
 [package]
-name = "vizcraft-core"
+name = "vizardcraft-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "VizCraft core: the project document, data model build, visual queries, fx properties, chart scenes, analytics"
+description = "VizardCraft core: the project document, data model build, visual queries, fx properties, chart scenes, analytics"
 
 [lints]
 workspace = true
 
 [dependencies]
-vizcraft-datamodel = { workspace = true }
-vizcraft-query = { workspace = true }
+vizardcraft-datamodel = { workspace = true }
+vizardcraft-query = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

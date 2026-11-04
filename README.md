@@ -1,11 +1,13 @@
-<h1 align="center">VizCraft</h1>
+<p align="center"><img src="assets/brand/vizardcraft-logo.png" alt="VizardCraft" width="260"></p>
+
+<h1 align="center">VizardCraft</h1>
 
 <p align="center"><b>An open-source business-intelligence and data-science studio, written from scratch in Rust.</b><br>
 Power BI's data prep and semantic model, Tableau's worksheets, dashboards and stories,
 Figma-style design elements, Excel-style data sheets, Orange/KNIME-style machine learning,
 an embedded SQL engine, and a local AI that learns how you work.</p>
 
-VizCraft follows the pattern of the ArtCraft "Craft" apps (GridCraft, PhotoCraft…): a native
+VizardCraft follows the pattern of the ArtCraft "Craft" apps (GridCraft, PhotoCraft…): a native
 egui desktop app over engine crates with no UI dependency, one JSON project file, and
 everything drawn in code. It runs on macOS, Windows and Linux.
 
@@ -23,28 +25,28 @@ everything drawn in code. It runs on macOS, Windows and Linux.
 | **Design** | Figma-style shapes (rect, ellipse, star, arrow, path, frames with auto layout), gradients, strokes, shadows, rotation, groups, layers, smart guides, align and distribute, rich text with per-run styles and data-bound colours |
 | **Analytics** | Constant/average/median/percentile lines, trend lines, Holt-Winters forecasting with confidence bands, clustering, anomalies, error bars |
 | **Data Science Studio** | Orange-style widget canvas: preprocessing, models (trees, forests, boosting, SVM, neural nets, regression, naive Bayes, kNN, clustering, PCA/t-SNE), evaluation (Test & Score, ROC, confusion matrix), statistics (regression with p-values, ANOVA, t-tests, chi², ARIMA) |
-| **MLOps** | Model registry with versions and stages, deploy as a REST endpoint (`vizcraft-mlserve`), batch scoring, drift monitoring, export |
+| **MLOps** | Model registry with versions and stages, deploy as a REST endpoint (`vizardcraft-mlserve`), batch scoring, drift monitoring, export |
 | **Flows & notebooks** | Fabric/KNIME-style node pipelines and Python/DAX/M notebook cells whose outputs become model tables |
 | **SQL** | Embedded DuckDB over every model table, plus your own warehouse tables; SQL editor, results grid, Python cells |
 | **AI** | Bring your own key (OpenAI, Anthropic, Gemini, Hugging Face) or a local model (Ollama, LM Studio, llama.cpp, vLLM); Copilot pane that builds visuals and writes DAX/M; a Data Formulator-style exploration view; OpenJEV as a decision engine; a personal model that learns your habits on your machine |
-| **Git & agents** | Save as a `.vizp` folder project (like Power BI PBIP/PBIR): one file per measure, query, page and visual; the app reloads on outside edits; `vizcraft-server` CLI and an MCP server let Claude Code, VS Code and Cursor agents edit projects with the Copilot's tools |
-| **Publish** | VizCraft Service (self-hosted portal with workspaces, desktop and phone views), a static web folder, one self-contained HTML file to share anywhere, GitHub Pages with your own domain, SVG export. Published reports stay interactive (the engine runs in the browser as WebAssembly) |
+| **Git & agents** | Save as a `.vizp` folder project (like Power BI PBIP/PBIR): one file per measure, query, page and visual; the app reloads on outside edits; `vizardcraft-server` CLI and an MCP server let Claude Code, VS Code and Cursor agents edit projects with the Copilot's tools |
+| **Publish** | VizardCraft Service (self-hosted portal with workspaces, desktop and phone views), a static web folder, one self-contained HTML file to share anywhere, GitHub Pages with your own domain, SVG export. Published reports stay interactive (the engine runs in the browser as WebAssembly) |
 
 ## Install
 
 ### Download (macOS, Windows, Linux)
 Every push (to `main` or a `claude/*` branch) builds installers in GitHub Actions (`.github/workflows/release.yml`):
-open the latest **VizCraft release** workflow run → **Artifacts** → `VizCraft-macOS` (a `.dmg`),
-`VizCraft-Windows` (zip) or `VizCraft-Linux` (tar.gz). Tags named `vizcraft-v*` also publish a GitHub Release.
+open the latest **VizardCraft release** workflow run → **Artifacts** → `VizardCraft-macOS` (a `.dmg`),
+`VizardCraft-Windows` (zip) or `VizardCraft-Linux` (tar.gz). Tags named `vizardcraft-v*` also publish a GitHub Release.
 
-The macOS build is ad-hoc signed, not notarized: the first time, right-click **VizCraft.app → Open**
-(or run `xattr -dr com.apple.quarantine /Applications/VizCraft.app`).
+The macOS build is ad-hoc signed, not notarized: the first time, right-click **VizardCraft.app → Open**
+(or run `xattr -dr com.apple.quarantine /Applications/VizardCraft.app`).
 
 ### Build from source
 ```bash
-git clone https://github.com/MahidharaS/VizCraft-Clone.git
-cd VizCraft-Clone
-cargo run --release -p vizcraft -- --sample
+git clone https://github.com/MahidharaS/VizardCraft.git
+cd VizardCraft
+cargo run --release -p vizardcraft -- --sample
 ```
 Make a DMG on a Mac (needs Xcode command-line tools):
 ```bash
@@ -53,7 +55,7 @@ Make a DMG on a Mac (needs Xcode command-line tools):
 The first build compiles DuckDB from source and takes a while.
 
 ## Using it
-- `vizcraft --sample` opens the Retail Sales sample: 4 queries and a data sheet, a star schema, measures, a 3-page report, a worksheet and a story.
+- `vizardcraft --sample` opens the Retail Sales sample: 4 queries and a data sheet, a star schema, measures, a 3-page report, a worksheet and a story.
 - The rail on the left switches views: Report, Table, Model, DAX query, TMDL, Data sheets, Flows, Stories, SQL, Data Science Studio, Formulator, and the Power Query Editor.
 - Any text accepts live values: `{[Measure]}`, `{[Measure]:0.0%}`, `{SUM(Sales[Quantity])}`, `{Selected:Region}`, `{@Parameter}`, `{Page}`, `{Today:yyyy-mm-dd}`.
 - Ctrl+click runs a button while editing; **Reading view** behaves like a published report.
@@ -70,9 +72,9 @@ crates/ai          providers, agent loop with tools, OpenJEV client, the persona
 crates/mlops       model registry and serving
 crates/publish     web bundles, single-file HTML, service and GitHub Pages publishing
 crates/wasm        the engine compiled to WebAssembly for interactive published reports
-apps/vizcraft      the egui desktop app
-apps/vizcraft-server   the VizCraft Service portal and CLI (publish, export, render)
-apps/vizcraft-mlserve  ML model serving
+apps/vizardcraft      the egui desktop app
+apps/vizardcraft-server   the VizardCraft Service portal and CLI (publish, export, render)
+apps/vizardcraft-mlserve  ML model serving
 ```
 Visuals are drawn once into a renderer-independent `Scene`; the desktop paints it with egui and the
 web writes it as SVG, so published reports look exactly like the desktop.
@@ -81,6 +83,6 @@ Docs: [file formats, Git and agents](docs/file-formats.md) · [publishing](docs/
 
 ## Licence
 MIT OR Apache-2.0. See [NOTICE](NOTICE): the DAX and M engines started from GridCraft (the
-`vizclone/` project's engines, copied into this repository). VizCraft is not affiliated with Microsoft, Salesforce/Tableau, Figma,
+`vizclone/` project's engines, copied into this repository). VizardCraft is not affiliated with Microsoft, Salesforce/Tableau, Figma,
 Orange or KNIME; no vendor code, icons or artwork are used. OpenJEV weights are CC BY-NC 4.0 and are
 not bundled — you download and run them yourself.

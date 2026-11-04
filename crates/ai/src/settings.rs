@@ -1,4 +1,4 @@
-//! AI settings, stored per user in `~/.vizcraft/ai.json` — never in the project file, so a shared
+//! AI settings, stored per user in `~/.vizardcraft/ai.json` — never in the project file, so a shared
 //! `.vizc` never carries anyone's API key.
 
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ impl Default for OpenJevConfig {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Privacy {
-    /// Record actions in the personal brain (`~/.vizcraft/brain/events.jsonl`).
+    /// Record actions in the personal brain (`~/.vizardcraft/brain/events.jsonl`).
     pub learn: bool,
     /// Send sample rows (not just schema) to cloud models.
     pub send_sample_rows: bool,

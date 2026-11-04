@@ -64,7 +64,7 @@ pub enum AgentEvent {
     Done(Trace),
 }
 
-pub const SYSTEM_PROMPT: &str = "You are VizCraft Copilot, the assistant built into VizCraft, a desktop analytics studio \
+pub const SYSTEM_PROMPT: &str = "You are VizardCraft Copilot, the assistant built into VizardCraft, a desktop analytics studio \
 (Power BI + Tableau + Excel + Fabric + an Orange-style ML studio). You can operate the whole app with tools, \
 like a skilled analyst at the keyboard: the semantic model (measures, columns, relationships, TMDL), Power Query (M), \
 report pages and visuals, text, shapes and themes, filters, data sheets, Studio ML workflows, and navigation. \
@@ -224,12 +224,12 @@ mod tests {
     use super::*;
     use crate::provider::{ChatResponse, ScriptedProvider};
     use crate::tools::{self, Workspace};
-    use vizcraft_core::build;
+    use vizardcraft_core::build;
 
-    fn sample() -> (vizcraft_core::doc::Project, build::Built, u64) {
-        let mut p = vizcraft_core::sample::sales();
+    fn sample() -> (vizardcraft_core::doc::Project, build::Built, u64) {
+        let mut p = vizardcraft_core::sample::sales();
         build::sync_model_tables(&mut p);
-        let b = build::build(&p, &vizcraft_connectors::DesktopHost::default(), &tools::params(&p));
+        let b = build::build(&p, &vizardcraft_connectors::DesktopHost::default(), &tools::params(&p));
         let page = p.report.pages.first().map(|x| x.id).unwrap_or(0);
         (p, b, page)
     }

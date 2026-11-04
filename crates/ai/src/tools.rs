@@ -7,10 +7,10 @@
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
-use vizcraft_core::build::{self, Built, ColType};
-use vizcraft_core::doc::*;
-use vizcraft_core::scalar::Scalar;
-use vizcraft_core::state::{self, Runtime};
+use vizardcraft_core::build::{self, Built, ColType};
+use vizardcraft_core::doc::*;
+use vizardcraft_core::scalar::Scalar;
+use vizardcraft_core::state::{self, Runtime};
 
 use crate::provider::{ToolCall, ToolSpec};
 
@@ -91,7 +91,7 @@ pub fn specs() -> Vec<ToolSpec> {
         ),
         s(
             "set_format",
-            "Set a formatting property of an element (id, or 'selected', or 'last'). Keys: title.text, title.show, title.size, title.bold, title.color, labels.show, legend.show, legend.position, background.color, border.show, shadow.show, lines.width, markers.show, grid.horizontal. Use element 'report' with key 'theme' to change the report theme (VizCraft, Classic, Midnight, Ocean, Sunset, Forest, Monochrome, High contrast, Pastel, Executive).",
+            "Set a formatting property of an element (id, or 'selected', or 'last'). Keys: title.text, title.show, title.size, title.bold, title.color, labels.show, legend.show, legend.position, background.color, border.show, shadow.show, lines.width, markers.show, grid.horizontal. Use element 'report' with key 'theme' to change the report theme (VizardCraft, Classic, Midnight, Ocean, Sunset, Forest, Monochrome, High contrast, Pastel, Executive).",
             obj(json!({"element": {"type": "string"}, "key": {"type": "string"}, "value": {"description": "bool, number, text or #RRGGBB colour"}}), &["element", "key", "value"]),
         ),
         s("add_measure", "Add (or replace) a DAX measure. It is validated before it is kept.", obj(json!({"name": {"type": "string"}, "dax": {"type": "string"}, "table": {"type": "string"}, "format": {"type": "string", "description": "e.g. $#,0 or 0.0%"}}), &["name", "dax"])),
@@ -162,7 +162,7 @@ fn rebuild(ws: &mut Workspace) {
 
 fn refresh(ws: &mut Workspace) {
     build::sync_model_tables(ws.project);
-    let host = vizcraft_connectors::DesktopHost::default();
+    let host = vizardcraft_connectors::DesktopHost::default();
     *ws.built = build::build(ws.project, &host, &params(ws.project));
 }
 
@@ -184,7 +184,7 @@ pub fn execute(ws: &mut Workspace, call: &ToolCall) -> ToolOutcome {
         "suggest_relationships" => suggest_relationships(ws),
         "get_project" => get_project(ws, &s("path")),
         "edit_project" => edit_project(ws, &s("op"), &s("path"), a.get("value").cloned()),
-        "get_tmdl" => ok(json!({"tmdl": vizcraft_core::tmdl::write(ws.project, ws.built)}), "Read the model as TMDL"),
+        "get_tmdl" => ok(json!({"tmdl": vizardcraft_core::tmdl::write(ws.project, ws.built)}), "Read the model as TMDL"),
         "apply_tmdl" => apply_tmdl(ws, &s("script")),
         "add_relationship" => add_relationship(ws, &s("from"), &s("to"), &s("cardinality"), a.get("bothDirections").and_then(Value::as_bool).unwrap_or(false)),
         "add_calculated_column" => add_calc_column(ws, &s("table"), &s("name"), &s("dax")),
@@ -282,14 +282,14 @@ fn run_dax(ws: &mut Workspace, query: &str) -> ToolOutcome {
 }
 
 pub fn eval_m(p: &Project, expression: &str) -> Result<build::TableData, String> {
-    let host = vizcraft_connectors::DesktopHost::default();
+    let host = vizardcraft_connectors::DesktopHost::default();
     let ph = build::ProjectHost::new(p, &host);
-    let v = vizcraft_query::evaluate(expression, &ph).map_err(|e| e.message())?;
+    let v = vizardcraft_query::evaluate(expression, &ph).map_err(|e| e.message())?;
     let t = match v {
-        vizcraft_query::Value::Table(t) => (*t).clone(),
-        vizcraft_query::Value::List(l) => vizcraft_query::Table::new(vec!["Value".into()], l.iter().map(|v| vec![v.clone()]).collect()),
-        vizcraft_query::Value::Record(r) => vizcraft_query::Table::new(r.names.clone(), vec![r.values.clone()]),
-        other => vizcraft_query::Table::new(vec!["Value".into()], vec![vec![other]]),
+        vizardcraft_query::Value::Table(t) => (*t).clone(),
+        vizardcraft_query::Value::List(l) => vizardcraft_query::Table::new(vec!["Value".into()], l.iter().map(|v| vec![v.clone()]).collect()),
+        vizardcraft_query::Value::Record(r) => vizardcraft_query::Table::new(r.names.clone(), vec![r.values.clone()]),
+        other => vizardcraft_query::Table::new(vec!["Value".into()], vec![vec![other]]),
     };
     let mut td = build::TableData::from_m("Result", &t);
     td.infer_types();
@@ -507,7 +507,7 @@ pub fn json_to_prop(v: &Value) -> Prop {
         Value::Number(n) => Prop::Num(n.as_f64().unwrap_or(0.0)),
         Value::String(s) => {
             let t = s.trim();
-            if let Some(c) = vizcraft_core::color::Color::parse(t).filter(|_| t.starts_with('#')) {
+            if let Some(c) = vizardcraft_core::color::Color::parse(t).filter(|_| t.starts_with('#')) {
                 Prop::Color(c)
             } else if t.eq_ignore_ascii_case("true") || t.eq_ignore_ascii_case("on") {
                 Prop::Bool(true)
@@ -526,8 +526,8 @@ pub fn json_to_prop(v: &Value) -> Prop {
 fn set_format(ws: &mut Workspace, which: &str, key: &str, value: Value) -> ToolOutcome {
     if key.eq_ignore_ascii_case("theme") || which.eq_ignore_ascii_case("report") {
         let name = value.as_str().unwrap_or("").to_string();
-        let Some(theme) = vizcraft_core::color::Theme::NAMES.iter().find(|n| n.eq_ignore_ascii_case(&name)).and_then(|n| vizcraft_core::color::Theme::by_name(n)) else {
-            return fail(format!("Unknown theme `{name}`. Themes: {}", vizcraft_core::color::Theme::NAMES.join(", ")));
+        let Some(theme) = vizardcraft_core::color::Theme::NAMES.iter().find(|n| n.eq_ignore_ascii_case(&name)).and_then(|n| vizardcraft_core::color::Theme::by_name(n)) else {
+            return fail(format!("Unknown theme `{name}`. Themes: {}", vizardcraft_core::color::Theme::NAMES.join(", ")));
         };
         ws.project.report.theme = theme;
         let mut o = ok(json!({"theme": name}), format!("Applied the {name} theme"));
@@ -536,13 +536,13 @@ fn set_format(ws: &mut Workspace, which: &str, key: &str, value: Value) -> ToolO
     }
     let Some(id) = find_element(ws, which) else { return fail(format!("No element `{which}` on this page.")) };
     let Some(el) = ws.project.element_mut(id) else { return fail("Element not found.") };
-    let schema = vizcraft_core::format::schema_key(el);
+    let schema = vizardcraft_core::format::schema_key(el);
     let mut prop = json_to_prop(&value);
-    if let Some(def) = vizcraft_core::format::prop_def(&schema, key) {
+    if let Some(def) = vizardcraft_core::format::prop_def(&schema, key) {
         // Coerce to the property's kind.
         prop = match (&def.kind, prop) {
-            (vizcraft_core::format::PropKind::Choice(opts), Prop::Text(t)) => Prop::Choice(opts.iter().find(|o| o.eq_ignore_ascii_case(&t)).map(|o| o.to_string()).unwrap_or(t)),
-            (vizcraft_core::format::PropKind::Text | vizcraft_core::format::PropKind::Template, Prop::Num(n)) => Prop::Text(n.to_string()),
+            (vizardcraft_core::format::PropKind::Choice(opts), Prop::Text(t)) => Prop::Choice(opts.iter().find(|o| o.eq_ignore_ascii_case(&t)).map(|o| o.to_string()).unwrap_or(t)),
+            (vizardcraft_core::format::PropKind::Text | vizardcraft_core::format::PropKind::Template, Prop::Num(n)) => Prop::Text(n.to_string()),
             (_, p) => p,
         };
     } else if !key.contains('.') {
@@ -638,7 +638,7 @@ fn explain_visual(ws: &mut Workspace, which: &str) -> ToolOutcome {
     let Some(v) = el.visual() else { return fail("That element isn't a visual.") };
     let Some(page) = ws.project.page(pid) else { return fail("No page.") };
     let cx = state::context_for(ws.project, ws.built, &Runtime::default(), page, el);
-    let data = vizcraft_core::vquery::run(ws.project, ws.built, v, &cx);
+    let data = vizardcraft_core::vquery::run(ws.project, ws.built, v, &cx);
     if let Some(e) = &data.error {
         return fail(format!("The visual can't compute: {e}"));
     }
@@ -673,7 +673,7 @@ fn create_query(ws: &mut Workspace, name: &str, m: &str) -> ToolOutcome {
         Err(e) => return fail(format!("The M code doesn't evaluate: {e}")),
     };
     let name = ws.project.free_table_name(name);
-    ws.project.queries.queries.push(vizcraft_query::steps::QueryDef { name: name.clone(), m: m.to_string(), load: vizcraft_query::steps::LoadTo::Model, loaded_table: None, group: None, description: "Created by the copilot".into() });
+    ws.project.queries.queries.push(vizardcraft_query::steps::QueryDef { name: name.clone(), m: m.to_string(), load: vizardcraft_query::steps::LoadTo::Model, loaded_table: None, group: None, description: "Created by the copilot".into() });
     refresh(ws);
     let mut o = ok(json!({"query": name, "rows": t.len(), "columns": t.columns}), format!("Created query {name} ({} rows)", t.len()));
     o.mutated = true;
@@ -792,7 +792,7 @@ fn max_numeric_id(s: &str) -> u64 {
 
 fn apply_tmdl(ws: &mut Workspace, script: &str) -> ToolOutcome {
     let before = ws.project.model.clone();
-    match vizcraft_core::tmdl::apply_with(ws.project, Some(ws.built), script) {
+    match vizardcraft_core::tmdl::apply_with(ws.project, Some(ws.built), script) {
         Ok(changes) => {
             rebuild(ws);
             let errs: Vec<String> = ws.built.errors.iter().take(5).map(|(o, e)| format!("{o}: {e}")).collect();
@@ -1003,7 +1003,7 @@ fn add_text(ws: &mut Workspace, a: &Value) -> ToolOutcome {
         if let Some(b) = a.get("bold").and_then(Value::as_bool) {
             r.bold = b;
         }
-        if let Some(c) = a.get("color").and_then(Value::as_str).and_then(vizcraft_core::color::Color::parse) {
+        if let Some(c) = a.get("color").and_then(Value::as_str).and_then(vizardcraft_core::color::Color::parse) {
             r.color = Some(Prop::Color(c));
         }
     }
@@ -1016,7 +1016,7 @@ fn add_shape(ws: &mut Workspace, a: &Value) -> ToolOutcome {
     let shape: ShapeKind = serde_json::from_value(json!(name)).or_else(|_| serde_json::from_value(json!(cap(name)))).unwrap_or_default();
     let (x, y, w, h) = place(ws, a, 200.0, 120.0);
     let mut spec = ShapeSpec { shape, ..ShapeSpec::default() };
-    if let Some(c) = a.get("fill").and_then(Value::as_str).and_then(vizcraft_core::color::Color::parse) {
+    if let Some(c) = a.get("fill").and_then(Value::as_str).and_then(vizardcraft_core::color::Color::parse) {
         spec.fill = Fill::Solid(c);
     }
     if let Some(t) = a.get("text").and_then(Value::as_str) {
@@ -1106,8 +1106,8 @@ fn set_cells(ws: &mut Workspace, sheet: &str, start: &str, rows: Value) -> ToolO
 }
 
 fn create_workflow(ws: &mut Workspace, name: &str, example: &str) -> ToolOutcome {
-    let mut wf = if example.is_empty() { vizcraft_core::studio::StudioWorkflow::default() } else {
-        match vizcraft_core::studio::examples::build(example) {
+    let mut wf = if example.is_empty() { vizardcraft_core::studio::StudioWorkflow::default() } else {
+        match vizardcraft_core::studio::examples::build(example) {
             Some(w) => w,
             None => return fail(format!("No example `{example}` (high_margin, ols, arima, segments).")),
         }
@@ -1127,8 +1127,8 @@ fn create_workflow(ws: &mut Workspace, name: &str, example: &str) -> ToolOutcome
 }
 
 fn add_widget(ws: &mut Workspace, workflow: &str, kind: &str, settings: Option<Value>, from: Option<u64>) -> ToolOutcome {
-    if vizcraft_core::studio::widget_type(kind).is_none() {
-        let kinds: Vec<&str> = vizcraft_core::studio::catalog().iter().map(|w| w.id).collect();
+    if vizardcraft_core::studio::widget_type(kind).is_none() {
+        let kinds: Vec<&str> = vizardcraft_core::studio::catalog().iter().map(|w| w.id).collect();
         return fail(format!("Unknown widget `{kind}`. Kinds: {}", kinds.join(", ")));
     }
     let Some(wf) = ws.project.studio.iter_mut().find(|w| w.name.eq_ignore_ascii_case(workflow) || workflow.parse::<usize>().ok().is_some_and(|_| false)) else { return fail(format!("No workflow `{workflow}`.")) };
@@ -1141,7 +1141,7 @@ fn add_widget(ws: &mut Workspace, workflow: &str, kind: &str, settings: Option<V
     }
     let mut linked = Value::Null;
     if let Some(f) = from {
-        let pair = (wf.widget(f).and_then(|w| vizcraft_core::studio::widget_type(&w.kind)), vizcraft_core::studio::widget_type(kind));
+        let pair = (wf.widget(f).and_then(|w| vizardcraft_core::studio::widget_type(&w.kind)), vizardcraft_core::studio::widget_type(kind));
         if let (Some(a), Some(b)) = pair
             && let Some((op, ip)) = a.outputs.iter().enumerate().find_map(|(oi, o)| b.inputs.iter().position(|i| o.chan.fits(i.chan)).map(|ii| (oi, ii)))
         {
@@ -1207,9 +1207,9 @@ mod tests {
     }
 
     pub fn sample() -> (Project, Built, u64) {
-        let mut p = vizcraft_core::sample::sales();
+        let mut p = vizardcraft_core::sample::sales();
         build::sync_model_tables(&mut p);
-        let host = vizcraft_connectors::DesktopHost::default();
+        let host = vizardcraft_connectors::DesktopHost::default();
         let b = build::build(&p, &host, &params(&p));
         let page = p.report.pages.first().map(|x| x.id).unwrap_or(0);
         (p, b, page)

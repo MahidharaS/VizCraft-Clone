@@ -1,19 +1,19 @@
 //! End-to-end M tests: typical Power Query queries evaluated by the engine.
 
-use vizcraft_query::{NoHost, Value, evaluate};
+use vizardcraft_query::{NoHost, Value, evaluate};
 
 fn eval(src: &str) -> Value {
     evaluate(src, &NoHost).unwrap_or_else(|e| panic!("{src}\n{e}"))
 }
 
-fn table(src: &str) -> vizcraft_query::Table {
+fn table(src: &str) -> vizardcraft_query::Table {
     match eval(src) {
         Value::Table(t) => (*t).clone(),
         other => panic!("not a table: {other:?}"),
     }
 }
 
-fn col(t: &vizcraft_query::Table, name: &str) -> Vec<String> {
+fn col(t: &vizardcraft_query::Table, name: &str) -> Vec<String> {
     let c = t.column_index(name).unwrap_or_else(|| panic!("no column {name} in {:?}", t.columns));
     t.rows.iter().map(|r| r[c].display()).collect()
 }

@@ -4,7 +4,7 @@
 use crate::color::Color;
 use crate::doc::*;
 use crate::scalar::Scalar;
-use vizcraft_query::steps::{LoadTo, QueryDef};
+use vizardcraft_query::steps::{LoadTo, QueryDef};
 
 /// A small deterministic pseudo-random generator.
 struct Rng(u64);
@@ -344,7 +344,7 @@ mod tests {
     #[test]
     fn sample_builds_and_queries() {
         let p = sales();
-        let b = build::build(&p, &vizcraft_query::NoHost, &BTreeMap::new());
+        let b = build::build(&p, &vizardcraft_query::NoHost, &BTreeMap::new());
         assert!(b.errors.is_empty(), "{:?}", b.errors);
         let page = p.report.pages.first().unwrap();
         let rt = crate::state::Runtime::default();

@@ -1,0 +1,18 @@
+[package]
+name = "vizardcraft-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "VizardCraft Service: a self-hosted portal for published reports (workspaces, desktop and mobile views)"
+
+[lints]
+workspace = true
+
+[dependencies]
+vizardcraft-core = { workspace = true }
+vizardcraft-publish = { workspace = true }
+vizardcraft-connectors = { workspace = true }
+vizardcraft-ai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tiny_http = { workspace = true }

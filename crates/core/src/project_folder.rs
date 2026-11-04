@@ -1,4 +1,4 @@
-//! The **VizCraft Project folder format** (`.vizp`): a Git-friendly, agent-friendly way to store a
+//! The **VizardCraft Project folder format** (`.vizp`): a Git-friendly, agent-friendly way to store a
 //! project as many small text files, like Power BI's PBIP/PBIR.
 //!
 //! A project saved as `Sales.vizp` is a small pointer file plus sibling folders:
@@ -283,8 +283,8 @@ pub fn to_files(p: &Project, stem: &str) -> Files {
     // ---------------------------------------------------------------- settings + pointer
     files.insert(dir("Settings").join("publish.json"), pretty(&take(&mut root, "publish")));
     let mut pointer = Map::new();
-    pointer.insert("$schema".into(), json!("https://vizcraft.dev/schemas/vizp-1.0.json"));
-    pointer.insert("vizcraftProject".into(), json!(FOLDER_VERSION));
+    pointer.insert("$schema".into(), json!("https://vizardcraft.dev/schemas/vizp-1.0.json"));
+    pointer.insert("vizardcraftProject".into(), json!(FOLDER_VERSION));
     pointer.insert("parts".into(), json!(PARTS.iter().map(|p| format!("{stem}.{p}")).collect::<Vec<_>>()));
     // Everything left (name, formatVersion, idSeed, …) stays in the pointer.
     for (k, v) in root {
@@ -306,7 +306,7 @@ pub fn from_files(files: &Files, stem: &str) -> crate::Result<Project> {
     let dir = |part: &str| PathBuf::from(format!("{stem}.{part}"));
     let Value::Object(mut root) = json_at(PathBuf::from(format!("{stem}.{EXT}")))? else { return Err(err(format!("{stem}.{EXT} is missing or not an object"))) };
     root.remove("$schema");
-    root.remove("vizcraftProject");
+    root.remove("vizardcraftProject");
     root.remove("parts");
     // Files under a folder, by the folder's relative path.
     let under = |folder: &Path, ext: &str| -> Vec<PathBuf> { files.keys().filter(|k| k.parent() == Some(folder) && k.extension().is_some_and(|e| e == ext)).cloned().collect() };
@@ -567,8 +567,8 @@ fn remove_empty_dirs(d: &Path) {
     }
 }
 
-const GITIGNORE: &str = "# VizCraft: local caches never belong in Git
-.vizcraft/
+const GITIGNORE: &str = "# VizardCraft: local caches never belong in Git
+.vizardcraft/
 *.duckdb
 *.duckdb.wal
 ";
@@ -587,9 +587,9 @@ const VSCODE_TASKS: &str = r#"{
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "VizCraft: validate project",
+      "label": "VizardCraft: validate project",
       "type": "shell",
-      "command": "vizcraft-server validate {stem}.vizp",
+      "command": "vizardcraft-server validate {stem}.vizp",
       "problemMatcher": [],
       "group": "test"
     }
@@ -600,18 +600,18 @@ const VSCODE_TASKS: &str = r#"{
 /// MCP config picked up by Claude Code (and similar agents) opened in this folder.
 const MCP_JSON: &str = r#"{
   "mcpServers": {
-    "vizcraft": {
-      "command": "vizcraft-server",
+    "vizardcraft": {
+      "command": "vizardcraft-server",
       "args": ["mcp", "{stem}.vizp"]
     }
   }
 }
 "#;
 
-const AGENTS_MD: &str = r#"# {stem} — a VizCraft project
+const AGENTS_MD: &str = r#"# {stem} — a VizardCraft project
 
-This folder is a VizCraft project in the **folder format** (`{stem}.vizp`), made for Git, code
-review and AI agents. Open it in VizCraft (File → Open, pick `{stem}.vizp`), or edit the files.
+This folder is a VizardCraft project in the **folder format** (`{stem}.vizp`), made for Git, code
+review and AI agents. Open it in VizardCraft (File → Open, pick `{stem}.vizp`), or edit the files.
 
 | What | Where |
 | --- | --- |
@@ -626,13 +626,13 @@ review and AI agents. Open it in VizCraft (File → Open, pick `{stem}.vizp`), o
 Rules for agents:
 - Keep JSON valid; keep `id` values unique (new ids: larger than `idSeed` in `{stem}.vizp`, then raise `idSeed`).
 - To add a measure: add an entry to `measures.json` (`table`, `name`, `format`, `file`) and its `.dax` file.
-- Check your edits: `vizcraft-server validate {stem}.vizp` (loads, refreshes and evaluates every measure).
-- Make changes with the same tools as the in-app Copilot: `vizcraft-server tools` lists them,
-  `vizcraft-server tool {stem}.vizp add_measure '{"name":"Margin %","dax":"DIVIDE([Profit],[Sales])"}'` runs one and saves.
+- Check your edits: `vizardcraft-server validate {stem}.vizp` (loads, refreshes and evaluates every measure).
+- Make changes with the same tools as the in-app Copilot: `vizardcraft-server tools` lists them,
+  `vizardcraft-server tool {stem}.vizp add_measure '{"name":"Margin %","dax":"DIVIDE([Profit],[Sales])"}'` runs one and saves.
 - Agents that speak MCP (Claude Code, VS Code, Cursor) get every Copilot tool through
-  `vizcraft-server mcp {stem}.vizp` (already configured in `.mcp.json`).
-- VizCraft reloads the project when these files change on disk (if it has no unsaved edits).
-- `vizcraft-server` ships inside the app: on macOS `/Applications/VizCraft.app/Contents/MacOS/vizcraft-server`.
+  `vizardcraft-server mcp {stem}.vizp` (already configured in `.mcp.json`).
+- VizardCraft reloads the project when these files change on disk (if it has no unsaved edits).
+- `vizardcraft-server` ships inside the app: on macOS `/Applications/VizardCraft.app/Contents/MacOS/vizardcraft-server`.
 "#;
 
 #[cfg(test)]

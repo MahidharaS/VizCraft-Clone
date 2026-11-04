@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
 
-use vizcraft_core::build::ColType;
-use vizcraft_core::scalar::Scalar;
+use vizardcraft_core::build::ColType;
+use vizardcraft_core::scalar::Scalar;
 
 use crate::text;
 
@@ -40,13 +40,13 @@ fn date_serials() {
 mod duck {
     use super::*;
     use std::collections::BTreeMap;
-    use vizcraft_core::build::TableData;
+    use vizardcraft_core::build::TableData;
     use crate::{Engine, ObjectKind, StatementOutput};
 
-    fn sample() -> vizcraft_core::build::Built {
-        let mut p = vizcraft_core::sample::sales();
-        vizcraft_core::build::sync_model_tables(&mut p);
-        vizcraft_core::build::build(&p, &vizcraft_query::NoHost, &BTreeMap::new())
+    fn sample() -> vizardcraft_core::build::Built {
+        let mut p = vizardcraft_core::sample::sales();
+        vizardcraft_core::build::sync_model_tables(&mut p);
+        vizardcraft_core::build::build(&p, &vizardcraft_query::NoHost, &BTreeMap::new())
     }
 
     #[test]
@@ -82,7 +82,7 @@ mod duck {
         assert_eq!(r.rows[0], vec![Scalar::Num(45306.0), Scalar::Num(45306.75), Scalar::Num(1.5)]);
         // As M: dates become M dates.
         let m = r.to_m();
-        assert_eq!(m.rows[0][0], vizcraft_query::Value::Date(45306));
+        assert_eq!(m.rows[0][0], vizardcraft_query::Value::Date(45306));
     }
 
     #[test]
@@ -121,7 +121,7 @@ mod duck {
 
     #[test]
     fn warehouse_persists() {
-        let dir = std::env::temp_dir().join(format!("vizcraft-sql-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vizardcraft-sql-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("project.duckdb");
         let _ = std::fs::remove_file(&path);
@@ -163,7 +163,7 @@ mod duck {
         assert!(!plan.trim().is_empty());
         let plan = e.explain("select sum(range) from range(1000)", true).unwrap();
         assert!(!plan.trim().is_empty());
-        let dir = std::env::temp_dir().join(format!("vizcraft-sql-files-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vizardcraft-sql-files-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let csv = dir.join("people.csv");
         std::fs::write(&csv, "name,age,born\nAda,36,1815-12-10\nAlan,41,1912-06-23\n").unwrap();
@@ -214,22 +214,22 @@ mod duck {
         assert!(matches!(d.outputs.first(), Some(StatementOutput::Error { message, .. }) if message.contains("cancel") || message.to_lowercase().contains("interrupt")), "{:?}", d.outputs);
     }
 
-    /// `VizCraft.Sql` in Power Query, through a host backed by the engine.
+    /// `VizardCraft.Sql` in Power Query, through a host backed by the engine.
     #[test]
     fn m_function() {
         struct H<'a>(&'a Engine);
-        impl vizcraft_query::m::eval::Host for H<'_> {
-            fn sql(&self, q: &str) -> vizcraft_query::Result<vizcraft_query::Table> {
-                self.0.query(q, usize::MAX).map(|r| r.to_m()).map_err(vizcraft_query::Error::Eval)
+        impl vizardcraft_query::m::eval::Host for H<'_> {
+            fn sql(&self, q: &str) -> vizardcraft_query::Result<vizardcraft_query::Table> {
+                self.0.query(q, usize::MAX).map(|r| r.to_m()).map_err(vizardcraft_query::Error::Eval)
             }
         }
         let b = sample();
         let mut e = Engine::open(None).unwrap();
         e.sync_model(b.tables.values().map(|t| t.as_ref()));
-        let v = vizcraft_query::evaluate("let S = VizCraft.Sql(\"select sum(Quantity) as q from Sales\") in S{0}[q]", &H(&e)).unwrap();
+        let v = vizardcraft_query::evaluate("let S = VizardCraft.Sql(\"select sum(Quantity) as q from Sales\") in S{0}[q]", &H(&e)).unwrap();
         let dax = b.model.evaluate("SUM(Sales[Quantity])").unwrap();
         assert_eq!(v.as_number(), Scalar::from_dm(&dax).as_f64());
-        let err = vizcraft_query::evaluate("VizCraft.Sql(\"select 1\")", &vizcraft_query::NoHost).unwrap_err();
+        let err = vizardcraft_query::evaluate("VizardCraft.Sql(\"select 1\")", &vizardcraft_query::NoHost).unwrap_err();
         assert!(err.to_string().contains("SQL"));
     }
 

@@ -1,4 +1,4 @@
-//! Sending bundles somewhere: a folder, a zip, a VizCraft Service (HTTP), GitHub Pages (git).
+//! Sending bundles somewhere: a folder, a zip, a VizardCraft Service (HTTP), GitHub Pages (git).
 //! Everything here blocks: call it from a worker thread in a UI.
 
 use std::io::{Read as _, Write as _};
@@ -85,7 +85,7 @@ fn http_err(e: ureq::Error) -> String {
     }
 }
 
-/// Checks a VizCraft Service: reachable, and whether the token may publish.
+/// Checks a VizardCraft Service: reachable, and whether the token may publish.
 pub fn service_ping(url: &str, token: &str) -> Result<String, String> {
     let base = url.trim_end_matches('/');
     let mut req = agent().get(&format!("{base}/api/ping"));
@@ -93,8 +93,8 @@ pub fn service_ping(url: &str, token: &str) -> Result<String, String> {
         req = req.set("Authorization", &format!("Bearer {token}"));
     }
     let resp = req.call().map_err(http_err)?;
-    let j: serde_json::Value = resp.into_json().map_err(|e| format!("That doesn't look like a VizCraft Service: {e}"))?;
-    let name = j.get("name").and_then(|v| v.as_str()).unwrap_or("VizCraft Service");
+    let j: serde_json::Value = resp.into_json().map_err(|e| format!("That doesn't look like a VizardCraft Service: {e}"))?;
+    let name = j.get("name").and_then(|v| v.as_str()).unwrap_or("VizardCraft Service");
     let reports = j.get("reports").and_then(|v| v.as_u64()).unwrap_or(0);
     match j.get("canPublish").and_then(|v| v.as_bool()) {
         Some(true) => Ok(format!("Connected to {name} ({reports} reports). The token can publish.")),
@@ -103,7 +103,7 @@ pub fn service_ping(url: &str, token: &str) -> Result<String, String> {
     }
 }
 
-/// Publishes a bundle to a VizCraft Service; returns the report's URL.
+/// Publishes a bundle to a VizardCraft Service; returns the report's URL.
 pub fn publish_to_service(url: &str, workspace: &str, name: &str, token: &str, files: &Files) -> Result<String, String> {
     let base = url.trim_end_matches('/');
     if !(base.starts_with("http://") || base.starts_with("https://")) {
@@ -194,7 +194,7 @@ fn valid_name(s: &str) -> bool {
 
 fn temp_dir(tag: &str) -> PathBuf {
     let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
-    std::env::temp_dir().join(format!("vizcraft-{tag}-{}-{nanos}", std::process::id()))
+    std::env::temp_dir().join(format!("vizardcraft-{tag}-{}-{nanos}", std::process::id()))
 }
 
 fn git(dir: &Path, args: &[&str], token: &str) -> Result<String, String> {
@@ -261,7 +261,7 @@ pub fn publish_github_pages(t: &GitHubTarget, files: &Files, message: &str, prog
         git(&dir, &["add", "-A"], token)?;
         let status = git(&dir, &["status", "--porcelain"], token)?;
         if !status.trim().is_empty() {
-            git(&dir, &["-c", "user.name=VizCraft", "-c", "user.email=vizcraft@users.noreply.github.com", "commit", "-q", "-m", message], token)?;
+            git(&dir, &["-c", "user.name=VizardCraft", "-c", "user.email=vizardcraft@users.noreply.github.com", "commit", "-q", "-m", message], token)?;
             progress("Pushing to GitHub…");
             git(&dir, &["push", "-q", "origin", &format!("HEAD:refs/heads/{branch}")], token)?;
         }
@@ -283,10 +283,10 @@ fn enable_pages(owner: &str, repo: &str, branch: &str, token: &str, domain: &str
         .post(&api)
         .set("Authorization", &auth)
         .set("Accept", "application/vnd.github+json")
-        .set("User-Agent", "VizCraft")
+        .set("User-Agent", "VizardCraft")
         .send_json(serde_json::json!({"source": {"branch": branch, "path": "/"}}));
     if !domain.is_empty() {
-        let _ = a.put(&api).set("Authorization", &auth).set("Accept", "application/vnd.github+json").set("User-Agent", "VizCraft").send_json(serde_json::json!({"cname": domain}));
+        let _ = a.put(&api).set("Authorization", &auth).set("Accept", "application/vnd.github+json").set("User-Agent", "VizardCraft").send_json(serde_json::json!({"cname": domain}));
     }
 }
 
@@ -303,7 +303,7 @@ pub fn open_in_browser(target: &str) -> Result<(), String> {
 
 /// Writes a single-file report to a temp folder and returns its path (Preview in browser).
 pub fn preview_file(html: &str, name: &str) -> Result<PathBuf, String> {
-    let dir = std::env::temp_dir().join("vizcraft-preview");
+    let dir = std::env::temp_dir().join("vizardcraft-preview");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let safe: String = name.chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '-' }).collect();
     let path = dir.join(format!("{}.html", if safe.is_empty() { "report".into() } else { safe }));

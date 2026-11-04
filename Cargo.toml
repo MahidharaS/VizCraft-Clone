@@ -1,24 +1,24 @@
 [workspace]
 resolver = "3"
-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "crates/ai", "crates/wasm", "apps/vizcraft", "apps/vizcraft-server", "crates/mlops", "apps/vizcraft-mlserve"]
-default-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "crates/ai", "apps/vizcraft", "apps/vizcraft-server", "crates/mlops", "apps/vizcraft-mlserve"]
+members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "crates/ai", "crates/wasm", "apps/vizardcraft", "apps/vizardcraft-server", "crates/mlops", "apps/vizardcraft-mlserve"]
+default-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "crates/ai", "apps/vizardcraft", "apps/vizardcraft-server", "crates/mlops", "apps/vizardcraft-mlserve"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.90"
-repository = "https://github.com/MahidharaS/VizCraft-Clone"
+repository = "https://github.com/MahidharaS/VizardCraft"
 
 [workspace.dependencies]
-vizcraft-datamodel = { path = "crates/datamodel" }
-vizcraft-query = { path = "crates/query" }
-vizcraft-core = { path = "crates/core" }
-vizcraft-connectors = { path = "crates/connectors" }
-vizcraft-publish = { path = "crates/publish" }
-vizcraft-sql = { path = "crates/sql" }
-vizcraft-ai = { path = "crates/ai" }
-vizcraft-mlops = { path = "crates/mlops" }
+vizardcraft-datamodel = { path = "crates/datamodel" }
+vizardcraft-query = { path = "crates/query" }
+vizardcraft-core = { path = "crates/core" }
+vizardcraft-connectors = { path = "crates/connectors" }
+vizardcraft-publish = { path = "crates/publish" }
+vizardcraft-sql = { path = "crates/sql" }
+vizardcraft-ai = { path = "crates/ai" }
+vizardcraft-mlops = { path = "crates/mlops" }
 thiserror = "2"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }

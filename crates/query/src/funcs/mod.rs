@@ -492,7 +492,7 @@ pub const NAMES: &[&str] = &[
     "Value.Is",
     "Value.ReplaceType",
     "Value.Type",
-    "VizCraft.Sql",
+    "VizardCraft.Sql",
     "Web.Contents",
     "Web.Page",
     "Xml.Document",

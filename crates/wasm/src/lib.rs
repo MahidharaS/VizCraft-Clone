@@ -1,4 +1,4 @@
-//! The VizCraft engine for the browser: `vizcraft-core` + the publish engine compiled to
+//! The VizardCraft engine for the browser: `vizardcraft-core` + the publish engine compiled to
 //! `wasm32-unknown-unknown`, with a tiny C-ABI JSON API the web viewer (`viewer.js`) calls.
 //!
 //! Every call takes one JSON argument (written into memory from [`alloc`]) and returns a pointer
@@ -18,17 +18,17 @@
 //! | `story_point` | `{story, index}` | outcome (`page`) |
 //! | `navigate` / `back` / `reset` | `{page, remember}` / `{}` / `{}` | outcome |
 //!
-//! Build: `packaging/build-wasm.sh` (or `cargo build -p vizcraft-wasm --release --target
+//! Build: `packaging/build-wasm.sh` (or `cargo build -p vizardcraft-wasm --release --target
 //! wasm32-unknown-unknown`).
 
 use std::cell::RefCell;
 
 use serde::Deserialize;
 use serde::Serialize;
-use vizcraft_core::build::TableData;
-use vizcraft_core::doc::{FieldRef, Project};
-use vizcraft_core::scalar::Scalar;
-use vizcraft_publish::engine::{Engine, Outcome};
+use vizardcraft_core::build::TableData;
+use vizardcraft_core::doc::{FieldRef, Project};
+use vizardcraft_core::scalar::Scalar;
+use vizardcraft_publish::engine::{Engine, Outcome};
 
 thread_local! {
     static ENGINE: RefCell<Option<Engine>> = const { RefCell::new(None) };
@@ -108,7 +108,7 @@ pub mod api {
     }
 
     pub fn load(a: Load) -> serde_json::Value {
-        vizcraft_core::state::set_today_serial(a.today.filter(|t| *t > 0.0));
+        vizardcraft_core::state::set_today_serial(a.today.filter(|t| *t > 0.0));
         let eng = Engine::from_data(a.project, a.tables);
         let errors: Vec<String> = eng.built.errors.iter().map(|(o, e)| format!("{o}: {e}")).collect();
         let pages = eng.p.report.pages.len();
@@ -304,10 +304,10 @@ mod tests {
 
     #[test]
     fn engine_api_cross_filters() {
-        let p = vizcraft_core::sample::sales();
-        let b = vizcraft_core::build::build(&p, &vizcraft_query::NoHost, &Default::default());
+        let p = vizardcraft_core::sample::sales();
+        let b = vizardcraft_core::build::build(&p, &vizardcraft_query::NoHost, &Default::default());
         let tables: Vec<TableData> = b.tables.values().map(|t| (**t).clone()).collect();
-        let load_arg = serde_json::json!({"project": vizcraft_publish::shareable_project(&p), "tables": tables, "today": 45500.0}).to_string();
+        let load_arg = serde_json::json!({"project": vizardcraft_publish::shareable_project(&p), "tables": tables, "today": 45500.0}).to_string();
         let r = call(load, &load_arg);
         assert_eq!(r["ok"], true, "{r}");
         let page = p.report.pages[0].id;

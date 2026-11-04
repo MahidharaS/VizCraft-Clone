@@ -13,7 +13,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use serde_json::{Value as J, json};
-use vizcraft_query::m::eval::Host;
+use vizardcraft_query::m::eval::Host;
 
 use crate::build::{ColType, TableData};
 use crate::doc::{Flow, FlowNode, Project, TableSource};
@@ -734,7 +734,7 @@ fn exec(ctx: &Ctx, flow: &Flow, node: &FlowNode, inputs: &[Option<PortData>]) ->
             if path.is_empty() {
                 return Err("Choose a CSV file.".into());
             }
-            let bytes = ctx.host.file_contents(&path).or_else(|_| std::fs::read(&path).map_err(|e| vizcraft_query::Error::Eval(e.to_string()))).map_err(|e| format!("Couldn't read {path}: {}", e.message()))?;
+            let bytes = ctx.host.file_contents(&path).or_else(|_| std::fs::read(&path).map_err(|e| vizardcraft_query::Error::Eval(e.to_string()))).map_err(|e| format!("Couldn't read {path}: {}", e.message()))?;
             let text = String::from_utf8_lossy(&bytes);
             let d = s_str(node, "delimiter");
             let delim = if d == "auto" || d.is_empty() { detect_delimiter(&text) } else { d.chars().next().unwrap_or(',') };
@@ -2069,7 +2069,7 @@ static PY_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsi
 /// Runs Python (`python3`, or `python` on Windows) in a temporary folder.
 pub fn run_python(job: &PyJob) -> Result<PyResult, String> {
     let n = PY_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("vizcraft-py-{}-{n}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("vizardcraft-py-{}-{n}", std::process::id()));
     std::fs::create_dir_all(&dir).map_err(|e| format!("Couldn't create a temporary folder: {e}"))?;
     let w = |name: &str, s: &str| std::fs::write(dir.join(name), s).map_err(|e| format!("Couldn't write {name}: {e}"));
     let mut meta_inputs = Vec::new();
@@ -2277,7 +2277,7 @@ pub fn unique_flow_name(p: &Project, base: &str) -> String {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use vizcraft_query::NoHost;
+    use vizardcraft_query::NoHost;
 
     fn t(cols: &[&str], rows: Vec<Vec<Scalar>>) -> TableData {
         let mut t = TableData { name: "t".into(), columns: cols.iter().map(|s| s.to_string()).collect(), types: vec![], rows };

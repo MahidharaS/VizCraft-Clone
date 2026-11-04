@@ -8,10 +8,10 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use vizcraft_core::build::{self, Built};
-use vizcraft_core::doc::*;
-use vizcraft_core::state::{self, Runtime};
-use vizcraft_core::vquery::{self, VisualData};
+use vizardcraft_core::build::{self, Built};
+use vizardcraft_core::doc::*;
+use vizardcraft_core::state::{self, Runtime};
+use vizardcraft_core::vquery::{self, VisualData};
 
 use crate::brain::features::{self, FieldSig};
 use crate::tools::{field_use, parse_kind, resolve_field};
@@ -322,7 +322,7 @@ pub fn rules_derive(p: &Project, built: &Built, name: &str) -> Option<DerivedFie
         (Some(a), None) if is(&["share", "% of total", "percent of total", "contribution"]) => mk(format!("DIVIDE({a}, CALCULATE({a}, ALLSELECTED()))")),
         (None, None) if is(&["count", "number of", "rows"]) => {
             let t = p.model.tables.iter().find(|t| l.contains(&t.name.to_lowercase())).or_else(|| p.model.tables.iter().max_by_key(|t| built.table(&t.name).map(|d| d.len()).unwrap_or(0)))?;
-            mk(format!("COUNTROWS({})", vizcraft_datamodel::model::quote_table(&t.name)))
+            mk(format!("COUNTROWS({})", vizardcraft_datamodel::model::quote_table(&t.name)))
         }
         _ => None,
     }
@@ -393,7 +393,7 @@ pub fn parse_ai(v: &Value) -> (Encoding, Vec<DerivedField>, String) {
 
 /// Rule-based interpretation of a prompt into an encoding (no LLM): Q&A over the model.
 pub fn rules_encoding(p: &Project, built: &Built, prompt: &str) -> Encoding {
-    let (wells, _) = vizcraft_core::charts::qna::interpret(p, built, prompt);
+    let (wells, _) = vizardcraft_core::charts::qna::interpret(p, built, prompt);
     let name = |fu: &FieldUse| match &fu.field {
         FieldRef::Measure { name, .. } => format!("[{name}]"),
         FieldRef::Column { table, column } => {
@@ -428,9 +428,9 @@ mod tests {
     use super::*;
 
     fn sample() -> (Project, Built) {
-        let mut p = vizcraft_core::sample::sales();
+        let mut p = vizardcraft_core::sample::sales();
         build::sync_model_tables(&mut p);
-        let b = build::build(&p, &vizcraft_connectors::DesktopHost::default(), &crate::tools::params(&p));
+        let b = build::build(&p, &vizardcraft_connectors::DesktopHost::default(), &crate::tools::params(&p));
         (p, b)
     }
 

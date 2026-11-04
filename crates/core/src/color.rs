@@ -129,13 +129,13 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Theme::by_name("VizCraft").unwrap_or_else(base)
+        Theme::by_name("VizardCraft").unwrap_or_else(base)
     }
 }
 
 fn base() -> Theme {
     Theme {
-        name: "VizCraft".into(),
+        name: "VizardCraft".into(),
         data_colors: palette(&["#2B6CE0", "#14B8A6", "#F97316", "#8B5CF6", "#EF4444", "#EAB308", "#0EA5E9", "#EC4899", "#22C55E", "#64748B"]),
         background: Color::rgb(0xF4, 0xF5, 0xF7),
         foreground: Color::rgb(0x1F, 0x23, 0x2B),
@@ -159,13 +159,13 @@ fn palette(h: &[&str]) -> Vec<Color> {
 }
 
 impl Theme {
-    pub const NAMES: &'static [&'static str] = &["VizCraft", "Classic", "Midnight", "Ocean", "Sunset", "Forest", "Monochrome", "High contrast", "Pastel", "Executive"];
+    pub const NAMES: &'static [&'static str] = &["VizardCraft", "Classic", "Midnight", "Ocean", "Sunset", "Forest", "Monochrome", "High contrast", "Pastel", "Executive"];
 
     pub fn by_name(name: &str) -> Option<Theme> {
         let mut t = base();
         t.name = name.to_string();
         match name {
-            "VizCraft" => {}
+            "VizardCraft" => {}
             "Classic" => {
                 t.data_colors = palette(&["#118DFF", "#12239E", "#E66C37", "#6B007B", "#E044A7", "#744EC2", "#D9B300", "#D64550", "#197278", "#1AAB40"]);
                 t.corner_radius = 0.0;

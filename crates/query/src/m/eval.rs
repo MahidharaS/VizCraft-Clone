@@ -45,11 +45,11 @@ pub trait Host {
         let _ = (args, query);
         Err(Error::Eval(format!("The {kind} connector isn't available here.")))
     }
-    /// `VizCraft.Sql(sql)` / `Sql.Native(sql)`: runs SQL on the host's embedded analytical
+    /// `VizardCraft.Sql(sql)` / `Sql.Native(sql)`: runs SQL on the host's embedded analytical
     /// engine (DuckDB over the model tables and the project warehouse).
     fn sql(&self, query: &str) -> Result<Table> {
         let _ = query;
-        Err(Error::Eval("The SQL engine isn't available here (VizCraft.Sql runs in the desktop app).".into()))
+        Err(Error::Eval("The SQL engine isn't available here (VizardCraft.Sql runs in the desktop app).".into()))
     }
 }
 

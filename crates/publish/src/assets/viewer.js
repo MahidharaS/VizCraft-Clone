@@ -1,6 +1,6 @@
-/* VizCraft published report viewer. No dependencies.
- * Data: window.VIZCRAFT_REPORT (single file) or report.json.
- * Engine: vizcraft_viewer.wasm (or window.VIZCRAFT_WASM_B64) — the VizCraft engine compiled to
+/* VizardCraft published report viewer. No dependencies.
+ * Data: window.VIZARDCRAFT_REPORT (single file) or report.json.
+ * Engine: vizardcraft_viewer.wasm (or window.VIZARDCRAFT_WASM_B64) — the VizardCraft engine compiled to
  * WebAssembly. Without it the report shows the pre-rendered pages (static mode). */
 (function () {
   'use strict';
@@ -51,7 +51,7 @@
   }
 
   function loadData() {
-    if (window.VIZCRAFT_REPORT) return Promise.resolve(window.VIZCRAFT_REPORT);
+    if (window.VIZARDCRAFT_REPORT) return Promise.resolve(window.VIZARDCRAFT_REPORT);
     return fetch('report.json').then(function (r) {
       if (!r.ok) throw new Error('report.json: ' + r.status);
       return r.json();
@@ -60,9 +60,9 @@
 
   function loadEngine(d) {
     if (!d.interactive || !d.project || typeof WebAssembly === 'undefined') return Promise.resolve(null);
-    var src = window.VIZCRAFT_WASM_B64
-      ? Promise.resolve(b64bytes(window.VIZCRAFT_WASM_B64))
-      : fetch('vizcraft_viewer.wasm').then(function (r) { if (!r.ok) throw new Error('engine: ' + r.status); return r.arrayBuffer(); });
+    var src = window.VIZARDCRAFT_WASM_B64
+      ? Promise.resolve(b64bytes(window.VIZARDCRAFT_WASM_B64))
+      : fetch('vizardcraft_viewer.wasm').then(function (r) { if (!r.ok) throw new Error('engine: ' + r.status); return r.arrayBuffer(); });
     return src.then(function (bytes) { return WebAssembly.instantiate(bytes, {}); }).then(function (res) {
       var e = new Engine(res.instance.exports);
       e.call('load', { project: d.project, tables: d.tables, today: d.today });
@@ -482,7 +482,7 @@
     d.stories = d.stories || [];
     d.parameters = d.parameters || [];
     if (qs.get('embed') === '1') {
-      // Embedded (the VizCraft Service portal): the actions move into the page tab bar.
+      // Embedded (the VizardCraft Service portal): the actions move into the page tab bar.
       S.embed = true;
       $('vc-app').classList.add('vc-embed');
       $('vc-tabs').appendChild(document.querySelector('.vc-actions'));
@@ -509,7 +509,7 @@
       if (S.mode === 'story') storyPoint(S.story, S.storyIdx);
       else { S.eng.call('navigate', { page: S.page }); refresh(); }
     }).catch(function (err) {
-      console.warn('VizCraft: the interactive engine did not load; showing the static report.', err);
+      console.warn('VizardCraft: the interactive engine did not load; showing the static report.', err);
       chrome();
     });
   }

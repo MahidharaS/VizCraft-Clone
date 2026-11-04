@@ -1,6 +1,6 @@
 # Data Science Studio
 
-An Orange-style visual workbench for machine learning and statistics, inside VizCraft. Open it
+An Orange-style visual workbench for machine learning and statistics, inside VizardCraft. Open it
 from the rail (the wired-nodes icon) or **Home → AI → Studio**.
 
 ## Layout
@@ -31,16 +31,16 @@ Everything recomputes automatically and is cached per widget, so only changed pa
 
 1. Add **Deploy → Register Model** after a trained model (optionally also connect Test & Score so
    the cross-validated metrics are stored). Set a name and click **Register new version**.
-2. Versions are saved in the project and in `~/.vizcraft/models/<name>/v<N>.json`. The registry
+2. Versions are saved in the project and in `~/.vizardcraft/models/<name>/v<N>.json`. The registry
    panel lets you set stages (Staging, Production, Archived; promoting to Production archives the
    previous Production version) and **Export** JSON plus a standalone Python scorer to
-   `~/.vizcraft/models/exports/`.
+   `~/.vizardcraft/models/exports/`.
 3. **Batch Score** applies a registered model to new data; **Drift Monitor** compares new data to
    the training data (PSI, KS); **Save as Table** saves scored data as a model table for reports.
 4. **Serve models** (top right) or the standalone binary serves the registry over HTTP:
 
 ```bash
-vizcraft-mlserve --port 8765
+vizardcraft-mlserve --port 8765
 ```
 ```bash
 curl -X POST http://127.0.0.1:8765/models/high-margin-orders/predict \
@@ -49,8 +49,8 @@ curl -X POST http://127.0.0.1:8765/models/high-margin-orders/predict \
 ```
 
 `GET /models` lists models and versions; the served version is Production, else Staging, else the
-latest. `vizcraft-mlserve` ships next to the app in every package (macOS: inside
-`VizCraft.app/Contents/MacOS/`).
+latest. `vizardcraft-mlserve` ships next to the app in every package (macOS: inside
+`VizardCraft.app/Contents/MacOS/`).
 
 ## Algorithms
 

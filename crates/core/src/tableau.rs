@@ -7,7 +7,7 @@
 
 use crate::build::{Built, ColType};
 use crate::doc::{Project, TableSource};
-use vizcraft_datamodel::model::quote_table;
+use vizardcraft_datamodel::model::quote_table;
 
 /// What a `[Field]` reference stands for.
 #[derive(Clone, Debug, PartialEq)]
@@ -58,13 +58,13 @@ pub fn translate_in(p: &Project, built: &Built, calc: &str, default_table: &str)
             None => built
                 .model
                 .table(t)
-                .map(|mt| mt.columns.iter().map(|c| (c.name.clone(), c.data_type() == vizcraft_datamodel::store::DataType::Text)).collect())
+                .map(|mt| mt.columns.iter().map(|c| (c.name.clone(), c.data_type() == vizardcraft_datamodel::store::DataType::Text)).collect())
                 .unwrap_or_default(),
         };
         if let Some(mt) = built.model.table(t) {
             for c in &mt.columns {
                 if c.expression.is_some() && !out.iter().any(|(n, _)| n == &c.name) {
-                    out.push((c.name.clone(), c.data_type() == vizcraft_datamodel::store::DataType::Text));
+                    out.push((c.name.clone(), c.data_type() == vizardcraft_datamodel::store::DataType::Text));
                 }
             }
         }
@@ -144,7 +144,7 @@ pub fn translate(calc: &str, default_table: &str, resolve: &dyn Fn(&str, Option<
 
 /// DAX text: kept as it is when it parses as DAX.
 fn passthrough(text: &str, default_table: &str) -> Option<Translation> {
-    vizcraft_datamodel::dax::parse(text).ok()?;
+    vizardcraft_datamodel::dax::parse(text).ok()?;
     let upper = text.to_ascii_uppercase();
     let aggregated = ["SUM", "AVERAGE", "COUNT", "MIN(", "MAX(", "CALCULATE", "DISTINCTCOUNT", "DIVIDE(["].iter().any(|f| upper.contains(f));
     Some(Translation { dax: text.to_string(), aggregated, home_table: default_table.to_string(), warnings: vec!["Kept as DAX.".into()] })
@@ -1135,9 +1135,9 @@ impl Emitter<'_> {
             }
             _ => {
                 // Functions with the same name and arguments in DAX.
-                let known = vizcraft_datamodel::model::Model::new().evaluate(&format!("{name}()")).err().is_none_or(|e| !e.to_string().contains("unknown function"));
+                let known = vizardcraft_datamodel::model::Model::new().evaluate(&format!("{name}()")).err().is_none_or(|e| !e.to_string().contains("unknown function"));
                 if !known {
-                    return Err(format!("`{name}` isn't a function VizCraft can translate."));
+                    return Err(format!("`{name}` isn't a function VizardCraft can translate."));
                 }
                 format!("{name}({})", self.args(args, cx)?.join(", "))
             }
@@ -1243,7 +1243,7 @@ mod tests {
     #[test]
     fn translations_run_on_the_sample() {
         let p = crate::sample::sales();
-        let b = crate::build::build(&p, &vizcraft_query::NoHost, &Default::default());
+        let b = crate::build::build(&p, &vizardcraft_query::NoHost, &Default::default());
         for (calc, agg) in [
             ("SUM([Quantity] * [Unit Price])", true),
             ("IF [Quantity] >= 3 THEN 'Bulk' ELSE 'Single' END", false),

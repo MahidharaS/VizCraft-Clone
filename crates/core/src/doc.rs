@@ -1,4 +1,4 @@
-//! The VizCraft project document, saved as JSON (`.vizc`).
+//! The VizardCraft project document, saved as JSON (`.vizc`).
 //!
 //! One project holds the whole chain: data acquisition (Power Query M queries and Excel-like
 //! data sheets), the semantic model (relationships, measures, calculated columns and tables,
@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use vizcraft_query::steps::QueryDoc;
+use vizardcraft_query::steps::QueryDoc;
 
 use crate::color::{Color, Theme};
 use crate::scalar::Scalar;
@@ -37,7 +37,7 @@ pub struct Project {
     /// Data Science Studio workflows (Orange-style ML / statistics canvases).
     #[serde(default)]
     pub studio: Vec<crate::studio::StudioWorkflow>,
-    /// The model registry (registered model versions; mirrored to `~/.vizcraft/models`).
+    /// The model registry (registered model versions; mirrored to `~/.vizardcraft/models`).
     #[serde(default)]
     pub models: Vec<crate::studio::RegisteredModel>,
 }
@@ -79,7 +79,7 @@ impl Project {
     }
 
     pub fn from_json(s: &str) -> crate::Result<Project> {
-        serde_json::from_str(s).map_err(|e| crate::Error::Msg(format!("This isn't a VizCraft project: {e}")))
+        serde_json::from_str(s).map_err(|e| crate::Error::Msg(format!("This isn't a VizardCraft project: {e}")))
     }
 
     pub fn page(&self, id: u64) -> Option<&Page> {
@@ -1687,7 +1687,7 @@ pub enum PublishTarget {
     Folder { path: String },
     /// One self-contained HTML file (share like an artifact).
     SingleFile { path: String },
-    /// A VizCraft Service (the `vizcraft-server` portal): URL, workspace and token.
+    /// A VizardCraft Service (the `vizardcraft-server` portal): URL, workspace and token.
     Service { url: String, workspace: String, token: String },
     /// GitHub Pages: repository (`owner/repo`), branch, token, custom domain (CNAME).
     GitHubPages { repo: String, branch: String, token: String, domain: String, path: String },

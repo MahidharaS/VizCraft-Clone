@@ -1,6 +1,6 @@
 # Project files, Git and agents
 
-VizCraft saves a project in one of two formats. Both hold exactly the same project and convert
+VizardCraft saves a project in one of two formats. Both hold exactly the same project and convert
 losslessly.
 
 | Format | Like Power BI | Use it for |
@@ -46,15 +46,15 @@ Sales.Settings/publish.json         publishing targets
 
 ## Command line (for agents, scripts and CI)
 
-`vizcraft-server` ships with the app (macOS: `/Applications/VizCraft.app/Contents/MacOS/`).
+`vizardcraft-server` ships with the app (macOS: `/Applications/VizardCraft.app/Contents/MacOS/`).
 
 ```bash
-vizcraft-server convert Sales.vizc Sales.vizp        # or back: Sales.vizp Sales.vizc
-vizcraft-server validate Sales.vizp                  # refresh, evaluate every measure; exit 1 on problems
-vizcraft-server describe Sales.vizp                  # tables, columns, measures, pages as JSON
-vizcraft-server dax Sales.vizp 'EVALUATE SUMMARIZECOLUMNS(Store[Region], "Sales", [Total Sales])'
-vizcraft-server tools                                # every Copilot tool with its JSON schema
-vizcraft-server tool Sales.vizp add_measure '{"name":"Margin %","dax":"DIVIDE([Total Profit],[Total Sales])","format":"0.0%"}'
+vizardcraft-server convert Sales.vizc Sales.vizp        # or back: Sales.vizp Sales.vizc
+vizardcraft-server validate Sales.vizp                  # refresh, evaluate every measure; exit 1 on problems
+vizardcraft-server describe Sales.vizp                  # tables, columns, measures, pages as JSON
+vizardcraft-server dax Sales.vizp 'EVALUATE SUMMARIZECOLUMNS(Store[Region], "Sales", [Total Sales])'
+vizardcraft-server tools                                # every Copilot tool with its JSON schema
+vizardcraft-server tool Sales.vizp add_measure '{"name":"Margin %","dax":"DIVIDE([Total Profit],[Total Sales])","format":"0.0%"}'
 ```
 
 `tool` runs exactly what the in-app Copilot runs (validated, then saved; `--dry-run` doesn't
@@ -63,13 +63,13 @@ save).
 ## MCP: Claude Code, VS Code, Cursor
 
 ```bash
-vizcraft-server mcp Sales.vizp
+vizardcraft-server mcp Sales.vizp
 ```
 
 This is a Model Context Protocol server on stdio exposing the Copilot tools (read the model, run
 DAX/M, add measures, columns, relationships, queries, visuals, text, shapes, sheets, Studio
 workflows, apply TMDL, and edit any part of the project). Each change is saved immediately, so an
-open VizCraft window updates live. A saved folder project includes `.mcp.json`, so Claude Code
+open VizardCraft window updates live. A saved folder project includes `.mcp.json`, so Claude Code
 opened in that folder finds the server by itself.
 
 ## Copilot inside the app

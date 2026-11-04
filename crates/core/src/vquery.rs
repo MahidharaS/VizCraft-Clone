@@ -384,7 +384,7 @@ pub fn query(p: &Project, built: &Built, cats: &[(String, FieldUse)], vals: &[(S
     if no_values && !group_by.is_empty() {
         // Keep only combinations that exist: count rows of the table that relates to the others.
         let fact = fact_table(p, &group_by);
-        measures.push(("__rows".into(), format!("COUNTROWS({})", vizcraft_datamodel::model::quote_table(&fact))));
+        measures.push(("__rows".into(), format!("COUNTROWS({})", vizardcraft_datamodel::model::quote_table(&fact))));
     }
     let res = m.summarize(&group_by, &measures, filters).map_err(|e| e.to_string())?;
     // Map result columns back: group_by columns come first, then measures.

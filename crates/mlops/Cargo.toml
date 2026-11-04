@@ -1,14 +1,14 @@
 [package]
-name = "vizcraft-mlops"
+name = "vizardcraft-mlops"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "VizCraft MLOps: on-disk model registry (versions, stages), artifacts and a JSON scoring server"
+description = "VizardCraft MLOps: on-disk model registry (versions, stages), artifacts and a JSON scoring server"
 
 [lints]
 workspace = true
 
 [dependencies]
-vizcraft-core = { workspace = true }
+vizardcraft-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

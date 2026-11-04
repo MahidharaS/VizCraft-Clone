@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn examples_run_on_the_sample() {
         let p = crate::sample::sales();
-        let built = crate::build::build(&p, &vizcraft_query::NoHost, &Default::default());
+        let built = crate::build::build(&p, &vizardcraft_query::NoHost, &Default::default());
         let tables: std::collections::BTreeMap<String, Rc<crate::build::TableData>> = built.tables.clone();
         assert!(tables.contains_key("Sales") && tables.contains_key("Product"), "{:?}", tables.keys().collect::<Vec<_>>());
         let ctx = Ctx { tables: &tables, generation: 1, registry: &[], base_dir: None };

@@ -4422,7 +4422,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
-name = "vizcraft"
+name = "vizardcraft"
 version = "0.1.0"
 dependencies = [
  "arboard",
@@ -4434,32 +4434,32 @@ dependencies = [
  "rfd",
  "serde",
  "serde_json",
- "vizcraft-ai",
- "vizcraft-connectors",
- "vizcraft-core",
- "vizcraft-datamodel",
- "vizcraft-mlops",
- "vizcraft-publish",
- "vizcraft-query",
- "vizcraft-sql",
+ "vizardcraft-ai",
+ "vizardcraft-connectors",
+ "vizardcraft-core",
+ "vizardcraft-datamodel",
+ "vizardcraft-mlops",
+ "vizardcraft-publish",
+ "vizardcraft-query",
+ "vizardcraft-sql",
 ]
 
 [[package]]
-name = "vizcraft-ai"
+name = "vizardcraft-ai"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "serde",
  "serde_json",
  "ureq 3.5.1",
- "vizcraft-connectors",
- "vizcraft-core",
- "vizcraft-datamodel",
- "vizcraft-query",
+ "vizardcraft-connectors",
+ "vizardcraft-core",
+ "vizardcraft-datamodel",
+ "vizardcraft-query",
 ]
 
 [[package]]
-name = "vizcraft-connectors"
+name = "vizardcraft-connectors"
 version = "0.1.0"
 dependencies = [
  "bytes",
@@ -4472,24 +4472,24 @@ dependencies = [
  "rusqlite",
  "serde_json",
  "ureq 3.5.1",
- "vizcraft-core",
- "vizcraft-query",
+ "vizardcraft-core",
+ "vizardcraft-query",
 ]
 
 [[package]]
-name = "vizcraft-core"
+name = "vizardcraft-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
- "vizcraft-datamodel",
- "vizcraft-query",
+ "vizardcraft-datamodel",
+ "vizardcraft-query",
 ]
 
 [[package]]
-name = "vizcraft-datamodel"
+name = "vizardcraft-datamodel"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -4499,35 +4499,35 @@ dependencies = [
 ]
 
 [[package]]
-name = "vizcraft-mlops"
+name = "vizardcraft-mlops"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
- "vizcraft-core",
+ "vizardcraft-core",
 ]
 
 [[package]]
-name = "vizcraft-mlserve"
+name = "vizardcraft-mlserve"
 version = "0.1.0"
 dependencies = [
- "vizcraft-mlops",
+ "vizardcraft-mlops",
 ]
 
 [[package]]
-name = "vizcraft-publish"
+name = "vizardcraft-publish"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
  "ureq 2.12.1",
- "vizcraft-core",
- "vizcraft-query",
+ "vizardcraft-core",
+ "vizardcraft-query",
  "zip 3.0.0",
 ]
 
 [[package]]
-name = "vizcraft-query"
+name = "vizardcraft-query"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -4537,39 +4537,39 @@ dependencies = [
 ]
 
 [[package]]
-name = "vizcraft-server"
+name = "vizardcraft-server"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
  "tiny_http",
- "vizcraft-ai",
- "vizcraft-connectors",
- "vizcraft-core",
- "vizcraft-publish",
+ "vizardcraft-ai",
+ "vizardcraft-connectors",
+ "vizardcraft-core",
+ "vizardcraft-publish",
 ]
 
 [[package]]
-name = "vizcraft-sql"
+name = "vizardcraft-sql"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "duckdb",
  "serde",
  "serde_json",
- "vizcraft-core",
- "vizcraft-query",
+ "vizardcraft-core",
+ "vizardcraft-query",
 ]
 
 [[package]]
-name = "vizcraft-wasm"
+name = "vizardcraft-wasm"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
- "vizcraft-core",
- "vizcraft-publish",
- "vizcraft-query",
+ "vizardcraft-core",
+ "vizardcraft-publish",
+ "vizardcraft-query",
 ]
 
 [[package]]

@@ -1,9 +1,9 @@
-//! VizCraft MLOps.
+//! VizardCraft MLOps.
 //!
-//! - [`Registry`]: an on-disk model registry (`~/.vizcraft/models/<name>/v<version>.json`, one
+//! - [`Registry`]: an on-disk model registry (`~/.vizardcraft/models/<name>/v<version>.json`, one
 //!   JSON artifact per version, MLflow-style stages None / Staging / Production / Archived).
 //! - [`server`]: a dependency-free HTTP scoring server (`GET /health`, `GET /models`,
-//!   `GET /models/<name>/schema`, `POST /models/<name>/predict`), run by the `vizcraft-mlserve`
+//!   `GET /models/<name>/schema`, `POST /models/<name>/predict`), run by the `vizardcraft-mlserve`
 //!   binary or in-process.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -11,17 +11,17 @@ pub mod server;
 
 use std::path::{Path, PathBuf};
 
-pub use vizcraft_core::studio::registry::{self as records, RegisteredModel, Stage};
+pub use vizardcraft_core::studio::registry::{self as records, RegisteredModel, Stage};
 
-/// The default registry directory: `~/.vizcraft/models` (or `$VIZCRAFT_MODELS`).
+/// The default registry directory: `~/.vizardcraft/models` (or `$VIZARDCRAFT_MODELS`).
 pub fn default_dir() -> PathBuf {
-    if let Ok(d) = std::env::var("VIZCRAFT_MODELS")
+    if let Ok(d) = std::env::var("VIZARDCRAFT_MODELS")
         && !d.is_empty()
     {
         return PathBuf::from(d);
     }
     let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_else(|_| ".".into());
-    PathBuf::from(home).join(".vizcraft").join("models")
+    PathBuf::from(home).join(".vizardcraft").join("models")
 }
 
 /// File-system safe model directory name.
@@ -153,9 +153,9 @@ fn write_atomic(path: &Path, text: &str) -> Result<(), String> {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use vizcraft_core::build::{ColType, TableData};
-    use vizcraft_core::scalar::Scalar;
-    use vizcraft_core::studio::learn::{self, LearnerSpec};
+    use vizardcraft_core::build::{ColType, TableData};
+    use vizardcraft_core::scalar::Scalar;
+    use vizardcraft_core::studio::learn::{self, LearnerSpec};
 
     pub fn table() -> TableData {
         let rows = (0..120)

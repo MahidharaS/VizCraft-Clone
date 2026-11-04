@@ -3,8 +3,8 @@
 //! learners generalise across projects through the types.
 
 use serde::{Deserialize, Serialize};
-use vizcraft_core::build::{Built, ColType};
-use vizcraft_core::doc::{FieldRef, FieldUse, Project};
+use vizardcraft_core::build::{Built, ColType};
+use vizardcraft_core::doc::{FieldRef, FieldUse, Project};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -37,7 +37,7 @@ fn places_resolve(built: &Built, table: &str, column: &str) -> bool {
     let Some(t) = built.table(table) else { return false };
     let Some(i) = t.column_index(column) else { return false };
     let vals: std::collections::BTreeSet<String> = t.rows.iter().take(5_000).filter_map(|r| r.get(i).map(|v| v.text())).filter(|v| !v.is_empty()).take(200).collect();
-    let hits = vals.iter().filter(|v| vizcraft_core::charts::world::lookup(v).is_some()).count();
+    let hits = vals.iter().filter(|v| vizardcraft_core::charts::world::lookup(v).is_some()).count();
     !vals.is_empty() && hits * 2 > vals.len()
 }
 
@@ -172,13 +172,13 @@ pub fn features(fields: &[FieldSig]) -> [f64; N_FEATURES] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vizcraft_core::build;
+    use vizardcraft_core::build;
 
     #[test]
     fn classifies_sample_fields() {
-        let mut p = vizcraft_core::sample::sales();
+        let mut p = vizardcraft_core::sample::sales();
         build::sync_model_tables(&mut p);
-        let b = build::build(&p, &vizcraft_connectors::DesktopHost::default(), &Default::default());
+        let b = build::build(&p, &vizardcraft_connectors::DesktopHost::default(), &Default::default());
         assert_eq!(classify(&p, &b, &FieldRef::col("Sales", "Date")).ty, "date");
         assert_eq!(classify(&p, &b, &FieldRef::measure("Sales", "Total Sales")).ty, "measure");
         // The sample's Region is East/North/South/West: not places the map can plot.

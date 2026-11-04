@@ -1,12 +1,12 @@
-//! The personal brain: every installed copy of VizCraft becomes its own learning model.
+//! The personal brain: every installed copy of VizardCraft becomes its own learning model.
 //!
 //! Like an ad account that learns from every campaign, the brain learns from what this user
 //! does: which visuals they build from which kinds of fields, how they format them, which Power
 //! Query steps follow which, which DAX patterns they write, which questions they ask and which
 //! suggestions they accept. It is:
 //!
-//! - **local**: an append-only log in `~/.vizcraft/brain/events.jsonl` and model weights in
-//!   `~/.vizcraft/brain/model.json`; nothing leaves the machine;
+//! - **local**: an append-only log in `~/.vizardcraft/brain/events.jsonl` and model weights in
+//!   `~/.vizardcraft/brain/model.json`; nothing leaves the machine;
 //! - **online**: each event updates the learners immediately (no batch training);
 //! - **explainable**: every suggestion says why ("you made a line chart for a date and a measure
 //!   in 9 of 11 cases");
@@ -436,7 +436,7 @@ pub fn read_events(path: &std::path::Path) -> Vec<Event> {
 
 /// "line" → "Line chart".
 pub fn kind_label(serde_name: &str) -> String {
-    serde_json::from_value::<vizcraft_core::doc::VisualKind>(serde_json::Value::String(serde_name.to_string())).map(|k| k.label().to_string()).unwrap_or_else(|_| serde_name.to_string())
+    serde_json::from_value::<vizardcraft_core::doc::VisualKind>(serde_json::Value::String(serde_name.to_string())).map(|k| k.label().to_string()).unwrap_or_else(|_| serde_name.to_string())
 }
 
 fn key_label(key: &str) -> String {
@@ -475,7 +475,7 @@ mod tests {
 
     #[test]
     fn learns_from_synthetic_events_and_persists() {
-        let dir = std::env::temp_dir().join(format!("vizcraft-brain-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vizardcraft-brain-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let mut b = Brain::open(dir.clone(), true);
         assert_eq!(b.recommend_chart(&dm(), 1)[0].title, "Line chart");

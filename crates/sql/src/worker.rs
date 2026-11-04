@@ -40,7 +40,7 @@ impl Worker {
         let (tx, jobs) = channel::<(u64, Job)>();
         let (done, rx) = channel::<JobDone>();
         std::thread::Builder::new()
-            .name("vizcraft-sql".into())
+            .name("vizardcraft-sql".into())
             .spawn(move || {
                 while let Ok((id, job)) = jobs.recv() {
                     let t0 = std::time::Instant::now();

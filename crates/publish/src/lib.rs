@@ -3,12 +3,12 @@
 //! [`bundle`] produces a static site — `index.html` (the viewer shell: page tabs, desktop/mobile
 //! toggle, filter pane, bookmarks, story player, tooltips), `viewer.js`, `viewer.css`,
 //! `report.json` (the report and a snapshot of its data, so it works offline), `thumbnail.svg`
-//! and, in interactive mode, `vizcraft_viewer.wasm` (the VizCraft engine compiled to
+//! and, in interactive mode, `vizardcraft_viewer.wasm` (the VizardCraft engine compiled to
 //! WebAssembly: slicers, cross-filtering, drill, parameters all work in the browser).
 //! Without the engine every page is pre-rendered to SVG in its desktop and phone layouts.
 //!
 //! [`single_file`] inlines all of it into one HTML file (share it like an artifact). The
-//! [`net`] module sends bundles to a VizCraft Service, GitHub Pages or a folder.
+//! [`net`] module sends bundles to a VizardCraft Service, GitHub Pages or a folder.
 //!
 //! [`render::render_element`] is the one function that draws an element (visual, shape, text,
 //! image, button) the same way everywhere.
@@ -23,8 +23,8 @@ pub mod net;
 
 use std::collections::BTreeMap;
 
-use vizcraft_core::build::{Built, TableData};
-use vizcraft_core::doc::*;
+use vizardcraft_core::build::{Built, TableData};
+use vizardcraft_core::doc::*;
 
 pub use engine::{Engine, ReportData};
 pub use render::{element_svg, page_svg, render_element};
@@ -35,7 +35,7 @@ const INDEX_HTML: &str = include_str!("assets/index.html");
 
 /// The WASM viewer engine, when it was built before this crate (see `packaging/build-wasm.sh`).
 #[cfg(has_viewer_wasm)]
-pub const VIEWER_WASM: Option<&[u8]> = Some(include_bytes!(env!("VIZCRAFT_VIEWER_WASM_PATH")));
+pub const VIEWER_WASM: Option<&[u8]> = Some(include_bytes!(env!("VIZARDCRAFT_VIEWER_WASM_PATH")));
 #[cfg(not(has_viewer_wasm))]
 pub const VIEWER_WASM: Option<&[u8]> = None;
 
@@ -154,7 +154,7 @@ pub fn report_data(p: &Project, built: &Built, opts: &BundleOptions) -> ReportDa
         format: 1,
         name: opts.title.clone().unwrap_or_else(|| p.name.clone()),
         published: now_rfc3339(),
-        generator: format!("VizCraft {}", env!("CARGO_PKG_VERSION")),
+        generator: format!("VizardCraft {}", env!("CARGO_PKG_VERSION")),
         interactive,
         include_mobile: opts.include_mobile,
         pages: included
@@ -175,7 +175,7 @@ pub fn report_data(p: &Project, built: &Built, opts: &BundleOptions) -> ReportDa
             })
             .collect(),
         parameters: if interactive { p.model.parameters.iter().filter_map(engine::ParamInfo::of).collect() } else { vec![] },
-        today: vizcraft_core::state::today_serial(),
+        today: vizardcraft_core::state::today_serial(),
         views,
         project: if interactive { Some(shareable_project(p)) } else { None },
         tables: if interactive { built.tables.values().map(|t| TableData::clone(t)).collect() } else { vec![] },
@@ -196,9 +196,9 @@ fn index_html(data: &ReportData, inline: Option<(&str, Option<&str>)>) -> String
     let (head, tail) = match inline {
         None => ("<link rel=\"stylesheet\" href=\"viewer.css\">".to_string(), "<script src=\"viewer.js\"></script>".to_string()),
         Some((json, wasm_b64)) => {
-            let mut t = format!("<script>window.VIZCRAFT_REPORT={};</script>", script_json(json));
+            let mut t = format!("<script>window.VIZARDCRAFT_REPORT={};</script>", script_json(json));
             if let Some(w) = wasm_b64 {
-                t += &format!("<script>window.VIZCRAFT_WASM_B64=\"{w}\";</script>");
+                t += &format!("<script>window.VIZARDCRAFT_WASM_B64=\"{w}\";</script>");
             }
             t += &format!("<script>{}</script>", VIEWER_JS.replace("</script", "<\\/script"));
             (format!("<style>{VIEWER_CSS}</style>"), t)
@@ -220,10 +220,10 @@ pub fn bundle(p: &Project, built: &Built, opts: &BundleOptions) -> Result<Files,
     if data.interactive
         && let Some(w) = opts.wasm.as_deref().or(VIEWER_WASM)
     {
-        files.push(("vizcraft_viewer.wasm".into(), w.to_vec()));
+        files.push(("vizardcraft_viewer.wasm".into(), w.to_vec()));
     }
     if let Some(pg) = data.pages.iter().find(|pg| !pg.hidden).or(data.pages.first()).and_then(|pi| p.page(pi.id)) {
-        let rt = vizcraft_core::state::Runtime { page: pg.id, ..Default::default() };
+        let rt = vizardcraft_core::state::Runtime { page: pg.id, ..Default::default() };
         files.push(("thumbnail.svg".into(), page_svg(p, built, &rt, pg, false).into_bytes()));
     }
     Ok(files)
@@ -303,8 +303,8 @@ mod tests {
 
     #[test]
     fn sample_bundles() {
-        let p = vizcraft_core::sample::sales();
-        let b = vizcraft_core::build::build(&p, &vizcraft_query::NoHost, &Default::default());
+        let p = vizardcraft_core::sample::sales();
+        let b = vizardcraft_core::build::build(&p, &vizardcraft_query::NoHost, &Default::default());
         let files = bundle(&p, &b, &BundleOptions { interactive: false, ..BundleOptions::default() }).unwrap();
         let names: Vec<&str> = files.iter().map(|(n, _)| n.as_str()).collect();
         assert!(names.contains(&"index.html") && names.contains(&"report.json") && names.contains(&"thumbnail.svg"));

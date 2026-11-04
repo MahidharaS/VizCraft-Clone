@@ -1,24 +1,24 @@
-# AI in VizCraft
+# AI in VizardCraft
 
-VizCraft has four AI surfaces:
+VizardCraft has four AI surfaces:
 
 - **Copilot**: a chat pane next to the Report, Table, Model and DAX views (Home ribbon > AI > Copilot).
   It reads the model, runs DAX and M, builds visuals, writes measures, adds filters and pages,
   and explains numbers. It asks before it changes the report, and Ctrl+Z undoes any change.
 - **Formulator**: a view based on Microsoft Data Formulator, on the rail with the `formulator` key.
-  You build charts from concept encodings plus natural language, and VizCraft derives any new fields.
+  You build charts from concept encodings plus natural language, and VizardCraft derives any new fields.
 - **AI hub**: settings for providers and keys, local models, the OpenJEV decision model, the personal brain and privacy. It is on the rail with the `ai` key.
 - **Suggestion chips**: the personal brain's recommendations, shown in the Visualizations pane's Build tab.
   An example: "Recommended: Line chart. You used a line chart for a date and a measure 82% of the time."
 
-The engine is the `vizcraft-ai` crate (`crates/ai`). The UI is `apps/vizcraft/src/ai/`.
+The engine is the `vizardcraft-ai` crate (`crates/ai`). The UI is `apps/vizardcraft/src/ai/`.
 
 ## Why it's all Rust
 
-LangChain, LangSmith, AutoGen and CrewAI are Python libraries. VizCraft is a single native
-binary, so `vizcraft-ai` implements the same pieces natively:
+LangChain, LangSmith, AutoGen and CrewAI are Python libraries. VizardCraft is a single native
+binary, so `vizardcraft-ai` implements the same pieces natively:
 
-| Python tool | `vizcraft-ai` equivalent |
+| Python tool | `vizardcraft-ai` equivalent |
 |---|---|
 | LangChain chat models | `provider::ChatProvider` (OpenAI-compatible, Anthropic, Gemini) |
 | LangChain tools / function calling | `tools::specs()` plus `tools::execute()` |
@@ -59,10 +59,10 @@ Streaming isn't used, because each agent step needs the full answer.
 
 The scan lists each server's models. **Use** sets that server as the active provider.
 
-**Settings and keys.** Settings are saved in `~/.vizcraft/ai.json` with file mode 600 on Unix. They are never saved in a
+**Settings and keys.** Settings are saved in `~/.vizardcraft/ai.json` with file mode 600 on Unix. They are never saved in a
 `.vizc` project, so sharing a project never shares a key. A key you type is stored in plain text in that
-file. When no key is stored, VizCraft reads the environment variable listed above, which is the better choice on shared
-machines. Set `VIZCRAFT_HOME` to move the whole `~/.vizcraft` folder.
+file. When no key is stored, VizardCraft reads the environment variable listed above, which is the better choice on shared
+machines. Set `VIZARDCRAFT_HOME` to move the whole `~/.vizardcraft` folder.
 
 **Without a provider**, everything still works in offline mode, and the UI labels it that way:
 
@@ -90,7 +90,7 @@ machines. Set `VIZCRAFT_HOME` to move the whole `~/.vizcraft` folder.
 
 - **Data list**: model tables, columns and measures, with a data preview.
 - **Concept encoding shelf**: x, y, color, size and column/row facets, plus the chart type. You can drag fields onto
-  the shelf or type field names. If you type a name that doesn't exist yet, such as *Profit ratio*, VizCraft derives it:
+  the shelf or type field names. If you type a name that doesn't exist yet, such as *Profit ratio*, VizardCraft derives it:
   - With an LLM, the model writes the DAX as a measure, or as a calculated column for row-level values.
   - Without one, rules handle ratio, per, margin, average, max/min, difference, running total, share of total and count.
   - Each derived field is validated by building and evaluating it. Failures are shown and the field isn't used.
@@ -109,13 +109,13 @@ machines. Set `VIZCRAFT_HOME` to move the whole `~/.vizcraft` folder.
 - **noul**: yes or no
 - **score**: ordered levels
 
-VizCraft uses decisions for fast routing, such as which chart type fits, whether a column is an ID, a date or a category,
+VizardCraft uses decisions for fast routing, such as which chart type fits, whether a column is an ID, a date or a category,
 and which transform comes next. There are three backends:
 
 1. **Personal brain (local, default)**: Dirichlet priors from your past choices plus lexical evidence. No network.
 2. **OpenJEV**: `POST {helper}/v1/systemone` with `{"model":"openjev","state":…,"questions":{name:{"type":"choice","instructions":…,"criteria":{…}}}}`.
-   VizCraft parses `answers.{name}.probabilities`, as well as `choice`, `confidence`, `noul` and `score`.
-   It sends `Authorization: Bearer <SHIM_TOKEN>` when a token is set. If OpenJEV fails, VizCraft falls back to the brain.
+   VizardCraft parses `answers.{name}.probabilities`, as well as `choice`, `confidence`, `noul` and `score`.
+   It sends `Authorization: Bearer <SHIM_TOKEN>` when a token is set. If OpenJEV fails, VizardCraft falls back to the brain.
 3. **Active chat model**: emulates typed decisions through a constrained JSON answer.
 
 ### Setting up OpenJEV
@@ -148,16 +148,16 @@ Other builds:
 
 **Licence:** the OpenJEV weights are **CC BY-NC 4.0**. They are free for research and other non-commercial use, with attribution.
 Commercial use needs a licence from the authors (support@loopai.com). The helper and serving files are Apache 2.0.
-VizCraft doesn't ship the weights. It only connects to a server you run.
+VizardCraft doesn't ship the weights. It only connects to a server you run.
 
 Keep the helper on loopback. If you expose it to other machines, set `SHIM_TOKEN` and enter the token in the AI hub.
 
 ## The personal brain
 
-Each installed copy of VizCraft learns its user's habits, the way an ad account learns from every campaign.
+Each installed copy of VizardCraft learns its user's habits, the way an ad account learns from every campaign.
 
 **What is recorded.** Recording is opt-in, on by default, and disclosed in a banner the first time.
-Events are appended to `~/.vizcraft/brain/events.jsonl` and include:
+Events are appended to `~/.vizardcraft/brain/events.jsonl` and include:
 
 - visuals created, with the visual type and the *types* of the fields used (date, measure, category, geo, ID, bool, plus cardinality)
 - visual types you changed to
@@ -171,7 +171,7 @@ Events are appended to `~/.vizcraft/brain/events.jsonl` and include:
 - typed decisions
 - the hour of day
 
-**Learners.** All learners train online, in Rust, on the device. Their weights are saved in `~/.vizcraft/brain/model.json`.
+**Learners.** All learners train online, in Rust, on the device. Their weights are saved in `~/.vizardcraft/brain/model.json`.
 If `model.json` is missing, it is rebuilt by replaying the log.
 
 | Learner | Method | Used for |
@@ -205,12 +205,12 @@ If `model.json` is missing, it is rebuilt by replaying the log.
 
 ```bash
 pip install "transformers>=4.46" "peft>=0.13" "datasets>=3" accelerate
-python finetune_lora.py --data sft.jsonl --base Qwen/Qwen2.5-0.5B-Instruct --out vizcraft-me
-python finetune_lora.py --merge --base Qwen/Qwen2.5-0.5B-Instruct --out vizcraft-me
-# convert to GGUF with llama.cpp, then: ollama create vizcraft-me -f Modelfile
+python finetune_lora.py --data sft.jsonl --base Qwen/Qwen2.5-0.5B-Instruct --out vizardcraft-me
+python finetune_lora.py --merge --base Qwen/Qwen2.5-0.5B-Instruct --out vizardcraft-me
+# convert to GGUF with llama.cpp, then: ollama create vizardcraft-me -f Modelfile
 ```
 
-To use the result, pick provider **Ollama** and model `vizcraft-me`. `decisions.jsonl` can also train a
+To use the result, pick provider **Ollama** and model `vizardcraft-me`. `decisions.jsonl` can also train a
 decision head in the style of Open-Jev-2B.
 
 ## Privacy
@@ -235,9 +235,9 @@ The report module already calls `track_insert`, `track_field_added`, `track_kind
 ## Demo and screenshot hooks
 
 ```bash
-VIZCRAFT_AI="copilot;ask=Show total sales by region" vizcraft --sample --view report
-VIZCRAFT_AI="seed;formulate=Total sales by region|enc:y=Profit ratio,x=Store[Category]" vizcraft --sample
-VIZCRAFT_AI="traces" …   # opens the trace viewer
+VIZARDCRAFT_AI="copilot;ask=Show total sales by region" vizardcraft --sample --view report
+VIZARDCRAFT_AI="seed;formulate=Total sales by region|enc:y=Profit ratio,x=Store[Category]" vizardcraft --sample
+VIZARDCRAFT_AI="traces" …   # opens the trace viewer
 ```
 
 The `seed` hook teaches an *in-memory* brain a few habits. It never writes to your real brain.

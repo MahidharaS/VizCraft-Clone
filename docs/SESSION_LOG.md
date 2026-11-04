@@ -330,3 +330,15 @@ VS Code; and a decision on how project files are stored.
   is selected automatically at startup when nothing is configured. Verified with a fake Ollama.
 - **UI**: welcome screen (quick starts, Copilot prompt, recent projects, blank report link), new
   logo (bars + spark) in the title bar, app icon updated to match, `.vizp` file association on macOS.
+
+## 10. Renamed to VizardCraft
+
+The user renamed the product **VizCraft → VizardCraft** with a new logo (layered stack: dark tile
+with bars and a gradient AI spark, a yellow layer, teal tiles). Everything was renamed: crates
+(`vizardcraft-*`), apps and binaries (`vizardcraft`, `vizardcraft-server`, `vizardcraft-mlserve`),
+`VizardCraft.app`, bundle id `com.vizardcraft.app`, env vars (`VIZARDCRAFT_*`), the settings
+folder `~/.vizardcraft` (an existing `~/.vizcraft` is moved over on first launch), docs and links
+(`github.com/MahidharaS/VizardCraft`). Project file extensions stay `.vizc` / `.vizp`.
+Brand assets are in `assets/brand/` (mark, wordmark, the original concept image) and
+`packaging/icon/vizardcraft-icon-*.png` (app icons; the old drawing script was removed).
+Earlier sections of this log keep the old name where they describe history.

@@ -1,0 +1,33 @@
+[package]
+name = "vizardcraft"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "VizardCraft: an open-source business intelligence studio (Power BI + Tableau + Fabric) in pure Rust"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "vizardcraft"
+path = "src/main.rs"
+
+[dependencies]
+vizardcraft-core = { workspace = true }
+vizardcraft-datamodel = { workspace = true }
+vizardcraft-query = { workspace = true }
+vizardcraft-connectors = { workspace = true }
+vizardcraft-publish = { workspace = true }
+vizardcraft-mlops = { workspace = true }
+# Embedded analytical SQL (DuckDB, compiled from source by the `duckdb` feature, on by default).
+vizardcraft-sql = { workspace = true, features = ["duckdb"] }
+vizardcraft-ai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+egui = { workspace = true }
+eframe = { workspace = true }
+egui_extras = { workspace = true }
+rfd = { workspace = true }
+arboard = { workspace = true }
+image = { workspace = true }
+chrono = { workspace = true }

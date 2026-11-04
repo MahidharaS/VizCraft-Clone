@@ -8,8 +8,8 @@ use std::time::Instant;
 use duckdb::arrow::datatypes::DataType;
 use duckdb::types::{TimeUnit, Value, ValueRef};
 use duckdb::{Connection, InterruptHandle};
-use vizcraft_core::build::{ColType, TableData};
-use vizcraft_core::scalar::Scalar;
+use vizardcraft_core::build::{ColType, TableData};
+use vizardcraft_core::scalar::Scalar;
 
 use crate::{CatalogObject, ObjectKind, QueryResult, Result, StatementOutput, quote_ident, quote_str, text};
 
@@ -314,7 +314,7 @@ pub fn file_reader(path: &str) -> Result<String> {
     } else if lower.ends_with(".xlsx") {
         format!("read_xlsx({p})")
     } else {
-        return Err(format!("VizCraft SQL can read CSV/TSV, Parquet, JSON and .xlsx files; `{path}` isn't one of those."));
+        return Err(format!("VizardCraft SQL can read CSV/TSV, Parquet, JSON and .xlsx files; `{path}` isn't one of those."));
     })
 }
 
@@ -359,7 +359,7 @@ pub fn to_value(v: &Scalar, ty: ColType) -> Value {
         (ColType::Date, Scalar::Num(n)) if n.is_finite() => Value::Date32(crate::serial_to_unix_days(*n)),
         (ColType::DateTime, Scalar::Num(n)) if n.is_finite() => Value::Timestamp(TimeUnit::Microsecond, crate::serial_to_unix_micros(*n)),
         (ColType::Time, Scalar::Num(n)) if n.is_finite() => Value::Time64(TimeUnit::Microsecond, (n.fract().abs() * 86_400_000_000.0).round() as i64),
-        (ColType::Date | ColType::DateTime, Scalar::Text(s)) => match vizcraft_core::build::parse_date(s) {
+        (ColType::Date | ColType::DateTime, Scalar::Text(s)) => match vizardcraft_core::build::parse_date(s) {
             Some(n) if ty == ColType::Date => Value::Date32(crate::serial_to_unix_days(n)),
             Some(n) => Value::Timestamp(TimeUnit::Microsecond, crate::serial_to_unix_micros(n)),
             None => Value::Null,

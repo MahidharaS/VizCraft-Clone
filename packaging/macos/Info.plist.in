@@ -6,13 +6,13 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>VizCraft</string>
+  <string>VizardCraft</string>
   <key>CFBundleName</key>
-  <string>VizCraft</string>
+  <string>VizardCraft</string>
   <key>CFBundleExecutable</key>
-  <string>VizCraft</string>
+  <string>VizardCraft</string>
   <key>CFBundleIdentifier</key>
-  <string>com.vizcraft.app</string>
+  <string>com.vizardcraft.app</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -23,10 +23,10 @@
   <string>@VERSION@</string>
   <key>CFBundleVersion</key>
   <string>@VERSION@</string>
-  <key>VizCraftBuildCommit</key>
+  <key>VizardCraftBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
-  <string>VizCraft</string>
+  <string>VizardCraft</string>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.business</string>
   <!-- Keep in sync with MACOSX_DEPLOYMENT_TARGET in make-dmg.sh. -->
@@ -39,38 +39,38 @@
   <key>NSRequiresAquaSystemAppearance</key>
   <false/>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright © the VizCraft authors. MIT OR Apache-2.0.</string>
+  <string>Copyright © the VizardCraft authors. MIT OR Apache-2.0.</string>
 
-  <!-- VizCraft projects: .vizc (single file) and .vizp (Git-friendly folder project pointer). -->
+  <!-- VizardCraft projects: .vizc (single file) and .vizp (Git-friendly folder project pointer). -->
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>
       <key>CFBundleTypeName</key>
-      <string>VizCraft Project</string>
+      <string>VizardCraft Project</string>
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>LSHandlerRank</key>
       <string>Owner</string>
       <key>LSItemContentTypes</key>
-      <array><string>com.vizcraft.project</string></array>
+      <array><string>com.vizardcraft.project</string></array>
       <key>CFBundleTypeIconFile</key>
-      <string>VizCraft</string>
+      <string>VizardCraft</string>
     </dict>
   </array>
   <key>UTExportedTypeDeclarations</key>
   <array>
     <dict>
       <key>UTTypeIdentifier</key>
-      <string>com.vizcraft.project</string>
+      <string>com.vizardcraft.project</string>
       <key>UTTypeDescription</key>
-      <string>VizCraft Project</string>
+      <string>VizardCraft Project</string>
       <key>UTTypeConformsTo</key>
       <array>
         <string>public.json</string>
         <string>public.data</string>
       </array>
       <key>UTTypeIconFile</key>
-      <string>VizCraft</string>
+      <string>VizardCraft</string>
       <key>UTTypeTagSpecification</key>
       <dict>
         <key>public.filename-extension</key>

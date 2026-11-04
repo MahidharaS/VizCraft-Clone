@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::rc::Rc;
 
-use vizcraft_query::{Error, MType, Result, Table, Value};
+use vizardcraft_query::{Error, MType, Result, Table, Value};
 
 /// Folder.Files reads at most this many files.
 const MAX_FILES: usize = 5000;

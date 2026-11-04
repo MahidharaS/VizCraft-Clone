@@ -324,8 +324,8 @@ impl Evaluator<'_> {
             })()),
             "TODAY" | "UTCTODAY" => s(Ok(Value::Number(now_serial(name == "UTCTODAY").floor()))),
             "NOW" | "UTCNOW" => s(Ok(Value::Number(now_serial(name == "UTCNOW")))),
-            "USERNAME" | "USERPRINCIPALNAME" | "USEROBJECTID" => s(Ok(Value::text("user@vizcraft.local"))),
-            "SELECTEDMEASURE" | "SELECTEDMEASURENAME" => s(err(format!("{name} is only available in calculation groups, which VizCraft doesn't have"))),
+            "USERNAME" | "USERPRINCIPALNAME" | "USEROBJECTID" => s(Ok(Value::text("user@vizardcraft.local"))),
+            "SELECTEDMEASURE" | "SELECTEDMEASURENAME" => s(err(format!("{name} is only available in calculation groups, which VizardCraft doesn't have"))),
             _ => None,
         }
     }

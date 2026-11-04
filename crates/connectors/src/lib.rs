@@ -18,8 +18,8 @@ pub mod python;
 pub mod web;
 pub mod xml;
 
-use vizcraft_query::m::eval::Host;
-use vizcraft_query::{Error, MType, Record, Result, Table, Value};
+use vizardcraft_query::m::eval::Host;
+use vizardcraft_query::{Error, MType, Record, Result, Table, Value};
 
 /// Reads files, folders, workbooks, the web and databases.
 #[derive(Default)]

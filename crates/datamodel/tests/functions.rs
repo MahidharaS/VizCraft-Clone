@@ -1,9 +1,9 @@
 //! Coverage of the wider DAX function library: statistics, percentiles, set operations, table
 //! constructors, more time intelligence, text and math functions.
 
-use vizcraft_datamodel::dates::ymd;
-use vizcraft_datamodel::store::Table;
-use vizcraft_datamodel::{CrossFilter, Model, Value};
+use vizardcraft_datamodel::dates::ymd;
+use vizardcraft_datamodel::store::Table;
+use vizardcraft_datamodel::{CrossFilter, Model, Value};
 
 fn n(x: f64) -> Value {
     Value::Number(x)

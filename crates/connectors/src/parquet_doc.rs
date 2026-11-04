@@ -2,7 +2,7 @@
 
 use parquet::file::reader::{FileReader, SerializedFileReader};
 use parquet::record::Field;
-use vizcraft_query::{Error, Result, Table, Value};
+use vizardcraft_query::{Error, Result, Table, Value};
 
 use crate::Args;
 
