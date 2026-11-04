@@ -222,7 +222,7 @@ app: `/Applications/VizCraft.app/Contents/MacOS/vizcraft-server`.
 To build the DMG yourself on a Mac:
 
 ```sh
-git clone https://github.com/digital-maven/all && cd all/vizcraft
+git clone https://github.com/MahidharaS/VizCraft-Clone && cd VizCraft-Clone
 packaging/macos/make-dmg.sh                    # host architecture
 packaging/macos/make-dmg.sh --arch universal   # needs both rustup targets (it adds them)
 open dist/

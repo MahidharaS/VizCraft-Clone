@@ -32,7 +32,7 @@ everything drawn in code. It runs on macOS, Windows and Linux.
 ## Install
 
 ### Download (macOS, Windows, Linux)
-Every push to `main` builds installers in GitHub Actions (`.github/workflows/release.yml`):
+Every push (to `main` or a `claude/*` branch) builds installers in GitHub Actions (`.github/workflows/release.yml`):
 open the latest **VizCraft release** workflow run → **Artifacts** → `VizCraft-macOS` (a `.dmg`),
 `VizCraft-Windows` (zip) or `VizCraft-Linux` (tar.gz). Tags named `vizcraft-v*` also publish a GitHub Release.
 
@@ -41,8 +41,8 @@ The macOS build is ad-hoc signed, not notarized: the first time, right-click **V
 
 ### Build from source
 ```bash
-git clone https://github.com/Digital-Maven/vizcraft.git
-cd vizcraft
+git clone https://github.com/MahidharaS/VizCraft-Clone.git
+cd VizCraft-Clone
 cargo run --release -p vizcraft -- --sample
 ```
 Make a DMG on a Mac (needs Xcode command-line tools):
@@ -76,10 +76,10 @@ apps/vizcraft-mlserve  ML model serving
 Visuals are drawn once into a renderer-independent `Scene`; the desktop paints it with egui and the
 web writes it as SVG, so published reports look exactly like the desktop.
 
-Docs: [publishing](docs/publishing.md) · [SQL](docs/sql.md) · [AI](docs/ai.md).
+Docs: [publishing](docs/publishing.md) · [SQL](docs/sql.md) · [AI](docs/ai.md) · [Data Science Studio](docs/studio.md) · [build log and hand-over](docs/SESSION_LOG.md).
 
 ## Licence
-MIT OR Apache-2.0. See [NOTICE](NOTICE): the DAX and M engines started from GridCraft (in this
-`digital-maven/all` repository's `vizclone/` directory). VizCraft is not affiliated with Microsoft, Salesforce/Tableau, Figma,
+MIT OR Apache-2.0. See [NOTICE](NOTICE): the DAX and M engines started from GridCraft (the
+`vizclone/` project's engines, copied into this repository). VizCraft is not affiliated with Microsoft, Salesforce/Tableau, Figma,
 Orange or KNIME; no vendor code, icons or artwork are used. OpenJEV weights are CC BY-NC 4.0 and are
 not bundled — you download and run them yourself.

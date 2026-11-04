@@ -67,12 +67,12 @@ if [[ "$SKIP_BUILD" = 0 ]]; then
   for t in "${TARGETS[@]}"; do rustup target add "$t" >/dev/null 2>&1 || true; done
   args=()
   for t in "${TARGETS[@]}"; do args+=(--target "$t"); done
-  cargo build --release -p vizcraft -p vizcraft-server "${args[@]}"
+  cargo build --release -p vizcraft -p vizcraft-server -p vizcraft-mlserve "${args[@]}"
 fi
 
 rm -rf "$WORK"
 mkdir -p "$WORK/bin" "$DIST"
-for bin in vizcraft vizcraft-server; do
+for bin in vizcraft vizcraft-server vizcraft-mlserve; do
   inputs=()
   for t in "${TARGETS[@]}"; do inputs+=("$TARGET_DIR/$t/release/$bin"); done
   if [[ ${#inputs[@]} -gt 1 ]]; then
@@ -102,6 +102,7 @@ cp "$WORK/bin/vizcraft" "$APP/Contents/MacOS/VizCraft"
 # The service / command-line publisher ships inside the app:
 #   /Applications/VizCraft.app/Contents/MacOS/vizcraft-server serve --port 8080
 cp "$WORK/bin/vizcraft-server" "$APP/Contents/MacOS/vizcraft-server"
+cp "$WORK/bin/vizcraft-mlserve" "$APP/Contents/MacOS/vizcraft-mlserve"
 cp "$WORK/VizCraft.icns" "$APP/Contents/Resources/VizCraft.icns"
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@BUILD_SHA@/$BUILD_SHA/g" "$HERE/Info.plist.in" >"$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist"
@@ -113,6 +114,7 @@ if [[ "$IDENTITY" != "-" ]]; then
   sign_args+=(--options runtime --timestamp)
 fi
 codesign "${sign_args[@]}" "$APP/Contents/MacOS/vizcraft-server"
+codesign "${sign_args[@]}" "$APP/Contents/MacOS/vizcraft-mlserve"
 codesign "${sign_args[@]}" --deep "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 

@@ -22,7 +22,7 @@ if (-not $SkipBuild) {
     rustup target add wasm32-unknown-unknown | Out-Null
     cargo build -p vizcraft-wasm --release --target wasm32-unknown-unknown
     if ($LASTEXITCODE -ne 0) { throw 'wasm build failed' }
-    cargo build --release -p vizcraft -p vizcraft-server
+    cargo build --release -p vizcraft -p vizcraft-server -p vizcraft-mlserve
     if ($LASTEXITCODE -ne 0) { throw 'build failed' }
 }
 
@@ -30,6 +30,7 @@ if (Test-Path $Work) { Remove-Item -Recurse -Force $Work }
 New-Item -ItemType Directory -Force -Path $Stage, $Dist | Out-Null
 Copy-Item (Join-Path $TargetDir 'release\vizcraft.exe') $Stage
 Copy-Item (Join-Path $TargetDir 'release\vizcraft-server.exe') $Stage
+Copy-Item (Join-Path $TargetDir 'release\vizcraft-mlserve.exe') $Stage
 @"
 VizCraft $Version for Windows
 
@@ -37,6 +38,7 @@ Run vizcraft.exe. Windows SmartScreen may warn that the app is unrecognised (it 
 choose "More info", then "Run anyway".
 
 VizCraft Service:  vizcraft-server.exe serve --port 8080 --token SECRET
+Model server:      vizcraft-mlserve.exe --port 8765
 Docs: docs/publishing.md in the source repository.
 "@ | Set-Content -Encoding UTF8 (Join-Path $Stage 'README.txt')
 

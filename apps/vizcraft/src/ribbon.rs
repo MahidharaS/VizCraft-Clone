@@ -301,6 +301,10 @@ fn home_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
                 app.pq_open = false;
             }
         });
+        if big_button(ui, t, "studio", "Studio", "Data Science Studio: machine learning and statistics workflows, model registry and serving").clicked() {
+            app.view = View::Studio;
+            app.pq_open = false;
+        }
     });
 }
 

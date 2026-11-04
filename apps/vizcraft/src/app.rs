@@ -29,10 +29,12 @@ pub enum View {
     Formulator,
     /// AI hub: providers, local models, OpenJEV, personal brain, privacy.
     Ai,
+    /// Data Science Studio: Orange-style ML / statistics canvas with MLOps.
+    Studio,
 }
 
 impl View {
-    pub const ALL: [(View, &'static str, &'static str); 11] = [
+    pub const ALL: [(View, &'static str, &'static str); 12] = [
         (View::Report, "report", "Report view"),
         (View::Table, "table-view", "Table view"),
         (View::Model, "model", "Model view"),
@@ -44,6 +46,7 @@ impl View {
         (View::Sql, "sql", "SQL (DuckDB analytics over the model, files and your warehouse; Python)"),
         (View::Formulator, "formulator", "Formulator (AI data threads, after Microsoft Data Formulator)"),
         (View::Ai, "ai", "AI hub (models, keys, local models, OpenJEV, personal brain)"),
+        (View::Studio, "studio", "Data Science Studio (machine learning, statistics, MLOps)"),
     ];
 }
 
@@ -119,6 +122,7 @@ pub struct VizApp {
     pub model_ui: crate::model::ModelUi,
     pub sheet_ui: crate::sheet::SheetUi,
     pub flows_ui: crate::flows::FlowsUi,
+    pub studio_ui: crate::studio::StudioUi,
     pub publish_ui: crate::publish::PublishUi,
     pub sql_ui: crate::sqlview::SqlUi,
     pub ribbon: crate::ribbon::RibbonUi,
@@ -164,6 +168,7 @@ impl VizApp {
             model_ui: Default::default(),
             sheet_ui: Default::default(),
             flows_ui: Default::default(),
+            studio_ui: Default::default(),
             publish_ui: Default::default(),
             sql_ui: Default::default(),
             ribbon: Default::default(),
@@ -588,6 +593,7 @@ impl eframe::App for VizApp {
                 View::Sql => crate::sqlview::show(self, ui),
                 View::Formulator => crate::ai::formulator::show(self, ui),
                 View::Ai => crate::ai::hub::show(self, ui),
+                View::Studio => crate::studio::show(self, ui),
             }
         }
         crate::pq::dialogs(self, &ctx);

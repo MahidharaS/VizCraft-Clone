@@ -284,4 +284,22 @@ partially working code that was **never merged or build-checked together**.
   - Thread cards pushed the resizable panel wider and the main area overflowed; fixed width cards.
   - Derived-data grid showed the same field twice.
 - Not exercised: real LLM calls (no keys in the session), OpenJEV server, Copilot apply flow.
-- Next: `wip/studio-mlops.patch` (§6 step 4), then §5 leftovers and §3 known issues.
+- **F — Data Science Studio + MLOps: merged and finished.** Patches 1–3 of `wip/studio-mlops.patch`
+  were already merged (agent D), so only 4–5 were applied (statistics library, studio engine,
+  `crates/mlops`). Missing pieces written this session:
+  - `apps/vizcraft-mlserve/src/main.rs` (the binary had only a Cargo.toml).
+  - The whole Studio UI (`apps/vizcraft/src/studio/`): palette, zoomable canvas with typed ports and
+    wiring, settings inspector for every parameter kind, widget windows for every view (reports,
+    scores, confusion matrix, ROC/lift/calibration, scatter, histogram, box plot, heat map,
+    correlations, sieve/mosaic, line, dendrogram, silhouette, PCA, forecast, decomposition,
+    ACF/PACF, distribution fits, drift), model registry panel (stages, export), Register / Save
+    as Table actions, built-in model server. Rail icon + **Home → AI → Studio** button.
+  - Verified headlessly on all 4 examples; registered a model from the UI, served it, and got a
+    prediction back over HTTP from both the in-app server and `vizcraft-mlserve`.
+  - `vizcraft-mlserve` is now included in the macOS, Windows and Linux packages. `docs/studio.md`.
+- Repository independence: this repo is not a fork, has no submodules and only one remote
+  (`MahidharaS/VizCraft-Clone`); README, Cargo metadata and docs now point here. Deleting the
+  original repositories does not affect it.
+- Still open from §3 (known issues): many-to-many filtering, matrix tabular layout, chart zoom
+  slider, sheet sort not rewriting formulas, PQ gear dialogs, fuzzy merge; AI calls with real keys
+  and OpenJEV were not exercised (no keys/servers here); the DMG has to come from the CI run.

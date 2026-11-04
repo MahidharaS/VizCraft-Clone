@@ -18,6 +18,7 @@ vizcraft-datamodel = { workspace = true }
 vizcraft-query = { workspace = true }
 vizcraft-connectors = { workspace = true }
 vizcraft-publish = { workspace = true }
+vizcraft-mlops = { workspace = true }
 # Embedded analytical SQL (DuckDB, compiled from source by the `duckdb` feature, on by default).
 vizcraft-sql = { workspace = true, features = ["duckdb"] }
 vizcraft-ai = { workspace = true }

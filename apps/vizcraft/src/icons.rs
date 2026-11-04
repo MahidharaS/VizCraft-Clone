@@ -106,6 +106,17 @@ pub fn paint(p: &Painter, r: Rect, name: &str, c: Color32) {
             star(0.42, 0.55, 0.4, c);
             star(0.8, 0.2, 0.17, soft);
         }
+        "studio" => {
+            // Widgets wired into a model: two inputs, a learner, a scored output.
+            p.circle_filled(at(0.15, 0.25), w * 0.09, c);
+            p.circle_filled(at(0.15, 0.75), w * 0.09, c);
+            p.line_segment([at(0.15, 0.25), at(0.5, 0.5)], s(c));
+            p.line_segment([at(0.15, 0.75), at(0.5, 0.5)], s(c));
+            p.circle_stroke(at(0.5, 0.5), w * 0.15, s(c));
+            p.circle_filled(at(0.5, 0.5), w * 0.06, soft);
+            p.line_segment([at(0.65, 0.5), at(0.85, 0.5)], s(c));
+            bar(0.82, 0.3, 0.95, 0.7, soft);
+        }
         "formulator" => {
             // A data thread: three nodes, a branch, a mini chart at the end.
             p.circle_filled(at(0.15, 0.2), w * 0.08, c);

@@ -4438,6 +4438,7 @@ dependencies = [
  "vizcraft-connectors",
  "vizcraft-core",
  "vizcraft-datamodel",
+ "vizcraft-mlops",
  "vizcraft-publish",
  "vizcraft-query",
  "vizcraft-sql",

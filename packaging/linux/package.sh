@@ -33,14 +33,15 @@ STAGE="$WORK/$NAME"
 echo "==> VizCraft $VERSION for Linux $ARCH"
 if [[ "$SKIP_BUILD" = 0 ]]; then
   "$ROOT/packaging/build-wasm.sh"
-  cargo build --release -p vizcraft -p vizcraft-server
+  cargo build --release -p vizcraft -p vizcraft-server -p vizcraft-mlserve
 fi
 
 rm -rf "$WORK"
 mkdir -p "$STAGE/bin" "$STAGE/share/applications" "$DIST"
 install -m755 "$TARGET_DIR/release/vizcraft" "$STAGE/bin/vizcraft"
 install -m755 "$TARGET_DIR/release/vizcraft-server" "$STAGE/bin/vizcraft-server"
-strip "$STAGE/bin/vizcraft" "$STAGE/bin/vizcraft-server" 2>/dev/null || true
+install -m755 "$TARGET_DIR/release/vizcraft-mlserve" "$STAGE/bin/vizcraft-mlserve"
+strip "$STAGE/bin/vizcraft" "$STAGE/bin/vizcraft-server" "$STAGE/bin/vizcraft-mlserve" 2>/dev/null || true
 install -m644 "$HERE/vizcraft.desktop" "$STAGE/share/applications/com.vizcraft.app.desktop"
 for s in 32 64 128 256 512; do
   mkdir -p "$STAGE/share/icons/hicolor/${s}x${s}/apps"
