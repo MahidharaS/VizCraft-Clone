@@ -254,3 +254,22 @@ partially working code that was **never merged or build-checked together**.
 - After prompt 3: stopped all agents, saved their unfinished work as patches, pushed.
 - After prompt 4: exported the project to `Digital-Maven/vizcraft` with full history, adapted the CI
   workflow to the repo root, and wrote this document.
+
+---
+
+## 8. Session 2 (2026-11-04, continued from another account in `MahidharaS/VizCraft-Clone`)
+
+- Imported this repo's full history into `MahidharaS/VizCraft-Clone` (branch
+  `claude/affectionate-archimedes-03idy6`).
+- Verified §6 step 2: `cargo build -p vizcraft -p vizcraft-server` OK; core/datamodel/query/connectors
+  tests all pass. The Power Query merge is fine.
+- **H — SQL engine: merged.** Applied `wip/sql-duckdb.patch` (use `git apply -p2 --3way`, the patches
+  carry the old `vizcraft/` prefix). Conflicts in `Cargo.toml` and `query/src/funcs/source.rs` were
+  additive. Fixes: DuckDB now builds with `parquet` + `json` features (it otherwise tried to download
+  extensions at runtime); `SELECT TOP n` rewrite left a double space. `cargo test -p vizcraft-sql`:
+  11 passed. SQL view checked headlessly: query runs, results grid shows typed columns.
+- Fixed an egui 0.37 issue across the app: `TextEdit::frame(..)` overrides `.margin(..)`, so text
+  drew under the SQL editor's line-number gutter (also DAX editor, sheet cell editor, Enter-data grid).
+  Margins now live in the frame's `inner_margin`.
+- Headless runs need `apt-get install libxkbcommon-x11-0`.
+- Next: `wip/ai-formulator.patch`, then `wip/studio-mlops.patch` (§6 step 4).

@@ -1197,7 +1197,7 @@ fn enter_body(ui: &mut Ui, t: &Tokens, g: &mut GetData) {
                 for c in 0..ncols {
                     if let Some(name) = grid.cols.get_mut(c) {
                         egui::Frame::new().fill(t.panel_alt).stroke(Stroke::new(0.5, t.border)).show(ui, |ui| {
-                            ui.add_sized(vec2(130.0, 22.0), egui::TextEdit::singleline(name).font(FontId::proportional(12.0)).frame(egui::Frame::NONE).text_color(t.text).margin(egui::Margin::symmetric(5, 3)));
+                            ui.add_sized(vec2(130.0, 22.0), egui::TextEdit::singleline(name).font(FontId::proportional(12.0)).frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(5, 3))).text_color(t.text));
                         });
                     }
                 }
@@ -1213,7 +1213,7 @@ fn enter_body(ui: &mut Ui, t: &Tokens, g: &mut GetData) {
                     ui.label(RichText::new((r + 1).to_string()).size(11.0).color(t.muted));
                     for c in 0..ncols {
                         if let Some(cell) = grid.rows.get_mut(r).and_then(|row| row.get_mut(c)) {
-                            let resp = egui::Frame::new().stroke(Stroke::new(0.5, t.border)).show(ui, |ui| ui.add_sized(vec2(130.0, 22.0), egui::TextEdit::singleline(cell).frame(egui::Frame::NONE).margin(egui::Margin::symmetric(5, 3)))).inner;
+                            let resp = egui::Frame::new().stroke(Stroke::new(0.5, t.border)).show(ui, |ui| ui.add_sized(vec2(130.0, 22.0), egui::TextEdit::singleline(cell).frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(5, 3))))).inner;
                             if resp.changed() && (cell.contains('\t') || cell.contains('\n')) {
                                 paste = Some((r, c, std::mem::take(cell)));
                             }

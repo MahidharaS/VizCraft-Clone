@@ -306,8 +306,7 @@ pub fn code_editor(ui: &mut Ui, id: egui::Id, text: &mut String, lang: Lang, t: 
                     .lock_focus(true)
                     .desired_width(f32::INFINITY)
                     .desired_rows(((height - 8.0) / row_h).max(1.0) as usize)
-                    .frame(egui::Frame::NONE)
-                    .margin(egui::Margin { left: 8, right: 8, top: 4, bottom: 4 })
+                    .frame(egui::Frame::NONE.inner_margin(egui::Margin { left: 8, right: 8, top: 4, bottom: 4 }))
                     .hint_text(egui::RichText::new(hint).color(t.muted).monospace())
                     .layouter(&mut layouter);
                 let out = te.show(ui);

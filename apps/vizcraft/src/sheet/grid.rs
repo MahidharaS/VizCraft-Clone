@@ -572,7 +572,7 @@ pub fn grid(app: &mut VizApp, st: &mut SheetUi, ui: &mut Ui, t: &Tokens) {
                 state.cursor.set_char_range(Some(egui::text::CCursorRange::one(egui::text::CCursor::new(text.chars().count()))));
                 state.store(ui.ctx(), id);
             }
-            let te = egui::TextEdit::singleline(&mut text).id(id).frame(egui::Frame::NONE).font(FontId::proportional(12.5)).margin(egui::Margin::symmetric(5, 4)).desired_width(rect.width() - 8.0);
+            let te = egui::TextEdit::singleline(&mut text).id(id).frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(5, 4))).font(FontId::proportional(12.5)).desired_width(rect.width() - 8.0);
             let r = ui.put(rect.shrink(1.0), te);
             if let Some(ed) = st.edit.as_mut() {
                 ed.text = text;
