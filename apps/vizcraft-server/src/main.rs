@@ -5,7 +5,14 @@
 //! vizcraft-server publish <file.vizc> --to http://host:8080 [--workspace W] [--name N] [--token T] [--static] [--no-mobile]
 //! vizcraft-server export  <file.vizc> --out DIR [--single] [--static] [--no-mobile]
 //! vizcraft-server render  <file.vizc> [--page N] --svg out.svg [--mobile]
+//! vizcraft-server convert <in.vizc|in.vizp> <out.vizp|out.vizc>
+//! vizcraft-server validate <project>
+//! vizcraft-server describe <project>
+//! vizcraft-server dax     <project> "EVALUATE …"
+//! vizcraft-server tools
+//! vizcraft-server tool    <project> <tool> '<json args>' [--dry-run]
 //! ```
+//! Projects are `.vizc` (one file) or `.vizp` (Git-friendly folder format).
 //! The token can also come from `VIZCRAFT_TOKEN`.
 
 mod portal;
@@ -27,6 +34,16 @@ USAGE:
   vizcraft-server export  <file.vizc> --out DIR [--single] [--static] [--no-mobile]
   vizcraft-server render  <file.vizc> [--page N] --svg OUT.svg [--mobile]
 
+For agents, scripts and CI (projects can be .vizc files or .vizp folder projects):
+  vizcraft-server convert  IN OUT            .vizc ⇄ .vizp (Git-friendly folder, like Power BI PBIP)
+  vizcraft-server validate PROJECT           load, refresh, evaluate every measure; exit 1 on errors
+  vizcraft-server describe PROJECT           the model and report as JSON
+  vizcraft-server dax      PROJECT QUERY     run a DAX query (EVALUATE …), print JSON rows
+  vizcraft-server tools                      list the Copilot tools (JSON schemas)
+  vizcraft-server tool     PROJECT NAME ARGS run one Copilot tool and save (ARGS = JSON; --dry-run to not save)
+  vizcraft-server mcp      PROJECT           an MCP server on stdio (Claude Code, VS Code, Cursor…): the Copilot
+                                             tools on this project; changes are saved as they happen
+
 Use --sample instead of a file for the built-in retail sample.
 The token can also be set with the VIZCRAFT_TOKEN environment variable.
 Pages are numbered from 1 in `render`.";
@@ -40,7 +57,7 @@ struct Args {
 
 impl Args {
     fn parse(raw: &[String]) -> Args {
-        const SWITCHES: &[&str] = &["single", "static", "no-mobile", "mobile", "help", "sample"];
+        const SWITCHES: &[&str] = &["single", "static", "no-mobile", "mobile", "help", "sample", "dry-run"];
         let mut a = Args { pos: vec![], opts: BTreeMap::new(), flags: vec![] };
         let mut i = 0;
         while let Some(s) = raw.get(i) {
@@ -81,6 +98,17 @@ fn main() {
         "publish" => publish(&args),
         "export" => export(&args),
         "render" => render(&args),
+        "convert" => convert(&args),
+        "validate" => validate(&args),
+        "describe" => describe(&args),
+        "dax" => dax(&args),
+        "tools" => {
+            let specs: Vec<serde_json::Value> = vizcraft_ai::tools::specs().into_iter().map(|t| serde_json::json!({"name": t.name, "description": t.description, "parameters": t.parameters, "mutating": vizcraft_ai::tools::is_mutating(&t.name)})).collect();
+            println!("{}", serde_json::to_string_pretty(&specs).unwrap_or_default());
+            Ok(())
+        }
+        "tool" => tool(&args),
+        "mcp" => mcp(&args),
         "" | "help" | "--help" | "-h" => {
             println!("{USAGE}");
             Ok(())
@@ -120,8 +148,7 @@ fn load(path: &str) -> Result<(Project, Built), String> {
     let mut p = if path == SAMPLE {
         vizcraft_core::sample::sales()
     } else {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("Couldn't read {path}: {e}"))?;
-        Project::from_json(&text).map_err(|e| e.to_string())?
+        vizcraft_core::project_folder::open_any(std::path::Path::new(path)).map_err(|e| format!("Couldn't read {path}: {e}"))?
     };
     // Relative file paths in queries resolve next to the project.
     if let Some(dir) = std::path::Path::new(path).parent().filter(|d| !d.as_os_str().is_empty()) {
@@ -135,6 +162,150 @@ fn load(path: &str) -> Result<(Project, Built), String> {
         eprintln!("warning: {obj}: {e}");
     }
     Ok((p, built))
+}
+
+fn abs(path: &str) -> PathBuf {
+    let p = PathBuf::from(path);
+    if p.is_absolute() { p } else { std::env::current_dir().map(|d| d.join(&p)).unwrap_or(p) }
+}
+
+fn convert(args: &Args) -> Result<(), String> {
+    let (p, dst) = if args.flag("sample") {
+        (vizcraft_core::sample::sales(), args.pos.first())
+    } else {
+        let Some(src) = args.pos.first() else { return Err("Usage: vizcraft-server convert IN OUT".into()) };
+        (vizcraft_core::project_folder::open_any(&abs(src)).map_err(|e| e.to_string())?, args.pos.get(1))
+    };
+    let Some(dst) = dst else { return Err("Usage: vizcraft-server convert IN OUT".into()) };
+    vizcraft_core::project_folder::save_any(&p, &abs(dst)).map_err(|e| e.to_string())?;
+    println!("Wrote {dst}");
+    Ok(())
+}
+
+fn validate(args: &Args) -> Result<(), String> {
+    let path = project_arg(args, "vizcraft-server validate PROJECT")?;
+    let (p, built) = load(&path)?;
+    let mut problems: Vec<String> = built.errors.iter().map(|(o, e)| format!("{o}: {e}")).collect();
+    for m in &p.model.measures {
+        if let Err(e) = built.model.evaluate(&format!("[{}]", m.name)) {
+            problems.push(format!("measure [{}]: {e}", m.name));
+        }
+    }
+    let mut ids = std::collections::BTreeSet::new();
+    for pg in &p.report.pages {
+        for e in &pg.elements {
+            if !ids.insert(e.id) {
+                problems.push(format!("duplicate element id {} on page {}", e.id, pg.name));
+            }
+            if e.id > p.id_seed {
+                problems.push(format!("element id {} is above idSeed {} (raise idSeed)", e.id, p.id_seed));
+            }
+        }
+    }
+    let summary = serde_json::json!({"ok": problems.is_empty(), "tables": built.tables.len(), "measures": p.model.measures.len(), "pages": p.report.pages.len(), "problems": problems});
+    println!("{}", serde_json::to_string_pretty(&summary).unwrap_or_default());
+    if problems.is_empty() { Ok(()) } else { Err(format!("{} problem(s)", problems.len())) }
+}
+
+fn describe(args: &Args) -> Result<(), String> {
+    let path = project_arg(args, "vizcraft-server describe PROJECT")?;
+    let (p, built) = load(&path)?;
+    println!("{}", serde_json::to_string_pretty(&vizcraft_ai::tools::describe_model_json(&p, &built)).unwrap_or_default());
+    Ok(())
+}
+
+fn dax(args: &Args) -> Result<(), String> {
+    let path = project_arg(args, "vizcraft-server dax PROJECT QUERY")?;
+    let q = args.pos.get(if path == SAMPLE { 0 } else { 1 }).cloned().ok_or("Which DAX query?")?;
+    let (p, built) = load(&path)?;
+    let (cols, rows) = vizcraft_ai::tools::run_dax_query(&built, &p, &q)?;
+    let out: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::Value::Object(cols.iter().zip(r).map(|(c, v)| (c.clone(), serde_json::to_value(v).unwrap_or_default())).collect())).collect();
+    println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+    Ok(())
+}
+
+fn tool(args: &Args) -> Result<(), String> {
+    let usage = "vizcraft-server tool PROJECT NAME '{json args}' [--dry-run]";
+    let path = project_arg(args, usage)?;
+    let off = if path == SAMPLE { 0 } else { 1 };
+    let name = args.pos.get(off).cloned().ok_or(format!("Which tool? {usage}"))?;
+    let raw = args.pos.get(off + 1).cloned().unwrap_or_else(|| "{}".into());
+    let arguments: serde_json::Value = serde_json::from_str(&raw).map_err(|e| format!("Arguments must be JSON: {e}"))?;
+    let save_path = (path != SAMPLE).then(|| abs(&path));
+    let (mut p, mut built) = load(&path)?;
+    let mut page = p.report.pages.first().map(|x| x.id).unwrap_or(0);
+    let out = {
+        let mut ws = vizcraft_ai::tools::Workspace { project: &mut p, built: &mut built, page: &mut page, selected: None, max_rows: 200, send_rows: true };
+        vizcraft_ai::tools::execute(&mut ws, &vizcraft_ai::provider::ToolCall { id: "cli".into(), name: name.clone(), arguments })
+    };
+    let result: serde_json::Value = serde_json::from_str(&out.text).unwrap_or(serde_json::Value::String(out.text.clone()));
+    let mut saved = false;
+    if out.ok && out.mutated && !args.flag("dry-run") {
+        if let Some(sp) = &save_path {
+            vizcraft_core::project_folder::save_any(&p, sp).map_err(|e| e.to_string())?;
+            saved = true;
+        }
+    }
+    println!("{}", serde_json::to_string_pretty(&serde_json::json!({"ok": out.ok, "summary": out.summary, "saved": saved, "result": result})).unwrap_or_default());
+    if out.ok { Ok(()) } else { Err(out.summary) }
+}
+
+/// A Model Context Protocol server over stdio (JSON-RPC 2.0, one message per line): exposes the
+/// Copilot tools on one project. Mutating calls save the project immediately, so a VizCraft window
+/// with the project open reloads it.
+fn mcp(args: &Args) -> Result<(), String> {
+    use std::io::{BufRead, Write};
+    use serde_json::{Value, json};
+    let path = project_arg(args, "vizcraft-server mcp PROJECT")?;
+    let save_path = (path != SAMPLE).then(|| abs(&path));
+    let (mut p, mut built) = load(&path)?;
+    let mut page = p.report.pages.first().map(|x| x.id).unwrap_or(0);
+    let stdin = std::io::stdin();
+    let mut out = std::io::stdout();
+    for line in stdin.lock().lines() {
+        let line = line.map_err(|e| e.to_string())?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let Ok(msg) = serde_json::from_str::<Value>(&line) else { continue };
+        let id = msg.get("id").cloned();
+        let method = msg.get("method").and_then(Value::as_str).unwrap_or("");
+        let result: Result<Value, (i64, String)> = match method {
+            "initialize" => Ok(json!({
+                "protocolVersion": msg.pointer("/params/protocolVersion").cloned().unwrap_or(json!("2025-06-18")),
+                "capabilities": {"tools": {"listChanged": false}},
+                "serverInfo": {"name": "vizcraft", "version": env!("CARGO_PKG_VERSION")},
+                "instructions": "Tools to read and edit a VizCraft analytics project (semantic model, DAX, Power Query M, report pages and visuals, data sheets, ML workflows). Call describe_model or get_project first. Every change is validated and saved."
+            })),
+            "ping" => Ok(json!({})),
+            "tools/list" => Ok(json!({"tools": vizcraft_ai::tools::specs().into_iter().filter(|t| !matches!(t.name.as_str(), "navigate" | "app_command")).map(|t| json!({"name": t.name, "description": t.description, "inputSchema": t.parameters})).collect::<Vec<_>>()})),
+            "tools/call" => {
+                let name = msg.pointer("/params/name").and_then(Value::as_str).unwrap_or("").to_string();
+                let arguments = msg.pointer("/params/arguments").cloned().unwrap_or(json!({}));
+                let o = {
+                    let mut ws = vizcraft_ai::tools::Workspace { project: &mut p, built: &mut built, page: &mut page, selected: None, max_rows: 200, send_rows: true };
+                    vizcraft_ai::tools::execute(&mut ws, &vizcraft_ai::provider::ToolCall { id: "mcp".into(), name, arguments })
+                };
+                let mut text = o.text.clone();
+                if o.ok && o.mutated && let Some(sp) = &save_path {
+                    if let Err(e) = vizcraft_core::project_folder::save_any(&p, sp) {
+                        text = format!("{text}\n(warning: not saved: {e})");
+                    }
+                }
+                Ok(json!({"content": [{"type": "text", "text": text}], "isError": !o.ok}))
+            }
+            m if m.starts_with("notifications/") => continue,
+            other => Err((-32601, format!("Unknown method {other}"))),
+        };
+        let Some(id) = id else { continue };
+        let reply = match result {
+            Ok(r) => json!({"jsonrpc": "2.0", "id": id, "result": r}),
+            Err((code, m)) => json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": m}}),
+        };
+        writeln!(out, "{reply}").map_err(|e| e.to_string())?;
+        out.flush().map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 fn bundle_opts(p: &Project, args: &Args) -> BundleOptions {

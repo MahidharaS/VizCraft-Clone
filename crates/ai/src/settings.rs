@@ -39,7 +39,7 @@ pub struct OpenJevConfig {
 
 impl Default for OpenJevConfig {
     fn default() -> Self {
-        OpenJevConfig { base_url: "http://localhost:3000".into(), token: String::new(), timeout_secs: 20 }
+        OpenJevConfig { base_url: "http://127.0.0.1:3000".into(), token: String::new(), timeout_secs: 20 }
     }
 }
 
@@ -103,6 +103,16 @@ impl AiSettings {
             if !s.providers.iter().any(|p| p.kind == k) {
                 s.providers.push(ProviderConfig::new(k));
             }
+        }
+        // Older settings used `localhost`, which can resolve to IPv6 first on macOS while local
+        // servers listen on IPv4 only.
+        for p in &mut s.providers {
+            if p.kind.is_local() && p.base_url.starts_with("http://localhost:") {
+                p.base_url = p.base_url.replacen("http://localhost:", "http://127.0.0.1:", 1);
+            }
+        }
+        if s.openjev.base_url.starts_with("http://localhost:") {
+            s.openjev.base_url = s.openjev.base_url.replacen("http://localhost:", "http://127.0.0.1:", 1);
         }
         if s.active.is_empty() {
             // First run: pick a provider whose key is in the environment.

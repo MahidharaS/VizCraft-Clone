@@ -45,7 +45,18 @@ pub fn show(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
                     app.dark = !app.dark;
                     crate::theme::apply(ui.ctx(), app.dark);
                 }
-                ui.add(egui::TextEdit::singleline(&mut app.ribbon.search).hint_text("🔍 Search commands").desired_width(220.0));
+                // Copilot is one click (or Ctrl/⌘+I) away from every view.
+                let on = app.ai.copilot_open;
+                let (r, resp) = ui.allocate_exact_size(egui::vec2(96.0, 24.0), egui::Sense::click());
+                let fill = if on { Color32::from_white_alpha(46) } else if resp.hovered() { Color32::from_white_alpha(30) } else { Color32::from_white_alpha(16) };
+                ui.painter().rect_filled(r, 12.0, fill);
+                crate::icons::paint(ui.painter(), egui::Rect::from_center_size(r.left_center() + egui::vec2(14.0, 0.0), egui::vec2(15.0, 15.0)), "ai", Color32::WHITE);
+                ui.painter().text(r.left_center() + egui::vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, "Copilot", egui::FontId::proportional(12.5), Color32::WHITE);
+                if resp.on_hover_text("Ask Copilot to do anything in VizCraft (Ctrl/⌘ + I)").clicked() {
+                    app.ai.copilot_open = !app.ai.copilot_open;
+                }
+                ui.add_space(6.0);
+                ui.add(egui::TextEdit::singleline(&mut app.ribbon.search).hint_text("Search commands").desired_width(200.0));
                 if !app.ribbon.search.is_empty() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                     let q = app.ribbon.search.to_lowercase();
                     run_search(app, &q);
@@ -154,14 +165,17 @@ fn file_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
         if big_button(ui, t, "new", "New", "New blank project (Ctrl+N)").clicked() {
             app.new_project();
         }
-        if big_button(ui, t, "open", "Open", "Open a .vizc project (Ctrl+O)").clicked() {
+        if big_button(ui, t, "open", "Open", "Open a project: .vizc (single file) or .vizp (Git folder) (Ctrl+O)").clicked() {
             app.open_dialog();
         }
         if big_button(ui, t, "save", "Save", "Save (Ctrl+S)").clicked() {
             app.save(false);
         }
-        if big_button(ui, t, "save", "Save as", "Save as a new file").clicked() {
+        if big_button(ui, t, "save", "Save as", "Save as a new file (.vizc single file or .vizp folder)").clicked() {
             app.save(true);
+        }
+        if big_button(ui, t, "git", "Save as folder", "Save as a Git-friendly project folder (.vizp, like Power BI PBIP): one file per measure, query, page and visual, editable by agents and in VS Code").clicked() {
+            app.save_as_folder();
         }
     });
     group(ui, t, "Samples", |ui| {
@@ -286,10 +300,6 @@ fn home_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
     group(ui, t, "AI", |ui| {
         if big_button(ui, t, "ai", "Copilot", "Ask about your data; build visuals, measures and filters with AI").clicked() {
             app.ai.copilot_open = !app.ai.copilot_open;
-            if app.ai.copilot_open && !matches!(app.view, View::Report | View::Table | View::Model | View::Dax) {
-                app.view = View::Report;
-            }
-            app.pq_open = false;
         }
         column(ui, |ui| {
             if small_button(ui, t, "formulator", "Formulator", "Data Formulator-style data threads: concept encodings, derived fields, branching").clicked() {

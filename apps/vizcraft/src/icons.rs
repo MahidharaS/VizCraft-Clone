@@ -106,6 +106,15 @@ pub fn paint(p: &Painter, r: Rect, name: &str, c: Color32) {
             star(0.42, 0.55, 0.4, c);
             star(0.8, 0.2, 0.17, soft);
         }
+        "git" => {
+            // A branch: trunk, a fork and a merge, three commits.
+            p.line_segment([at(0.3, 0.12), at(0.3, 0.88)], s(c));
+            p.add(egui::Shape::line(vec![at(0.3, 0.62), at(0.7, 0.42), at(0.7, 0.3)], s(c)));
+            for (fx, fy) in [(0.3, 0.12), (0.3, 0.88), (0.7, 0.3)] {
+                p.circle_filled(at(fx, fy), w * 0.1, c);
+            }
+            p.circle_filled(at(0.3, 0.12), w * 0.05, soft);
+        }
         "studio" => {
             // Widgets wired into a model: two inputs, a learner, a scored output.
             p.circle_filled(at(0.15, 0.25), w * 0.09, c);

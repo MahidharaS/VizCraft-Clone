@@ -169,11 +169,11 @@ impl ProviderKind {
             ProviderKind::Groq => "https://api.groq.com/openai/v1",
             ProviderKind::OpenRouter => "https://openrouter.ai/api/v1",
             ProviderKind::Together => "https://api.together.xyz/v1",
-            ProviderKind::Ollama => "http://localhost:11434/v1",
-            ProviderKind::LmStudio => "http://localhost:1234/v1",
-            ProviderKind::LlamaCpp => "http://localhost:8080/v1",
-            ProviderKind::Vllm => "http://localhost:8000/v1",
-            ProviderKind::Custom => "http://localhost:8000/v1",
+            ProviderKind::Ollama => "http://127.0.0.1:11434/v1",
+            ProviderKind::LmStudio => "http://127.0.0.1:1234/v1",
+            ProviderKind::LlamaCpp => "http://127.0.0.1:8080/v1",
+            ProviderKind::Vllm => "http://127.0.0.1:8000/v1",
+            ProviderKind::Custom => "http://127.0.0.1:8000/v1",
         }
     }
 

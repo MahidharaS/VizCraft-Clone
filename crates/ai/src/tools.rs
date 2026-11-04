@@ -40,6 +40,9 @@ pub struct ToolOutcome {
     pub elements: Vec<u64>,
     /// Pages created.
     pub pages: Vec<u64>,
+    /// Requests for the app (navigate to a view, save, undo, refresh…), as JSON objects with an
+    /// `action` key. Headless runs (CLI) ignore the ones that need a window.
+    pub actions: Vec<Value>,
 }
 
 fn ok(text: Value, summary: impl Into<String>) -> ToolOutcome {
@@ -50,7 +53,10 @@ fn fail(msg: impl Into<String>) -> ToolOutcome {
     ToolOutcome { text: json!({"error": m}).to_string(), summary: m, ok: false, ..ToolOutcome::default() }
 }
 
-pub const MUTATING: &[&str] = &["create_visual", "set_format", "add_measure", "add_filter", "create_page", "create_query"];
+pub const MUTATING: &[&str] = &[
+    "create_visual", "set_format", "add_measure", "add_filter", "create_page", "create_query", "update_query", "edit_project", "apply_tmdl", "add_relationship",
+    "add_calculated_column", "delete", "move_element", "add_text", "add_shape", "create_sheet", "set_cells", "create_workflow", "add_widget", "refresh",
+];
 
 pub fn is_mutating(name: &str) -> bool {
     MUTATING.contains(&name)
@@ -98,6 +104,29 @@ pub fn specs() -> Vec<ToolSpec> {
         s("explain_visual", "Return a visual's definition, its data and summary statistics so you can explain it (element id or 'selected').", obj(json!({"element": {"type": "string"}}), &["element"])),
         s("create_query", "Create a Power Query query from M code, load it to the model and refresh.", obj(json!({"name": {"type": "string"}, "m": {"type": "string"}}), &["name", "m"])),
         s("suggest_relationships", "Suggest relationships between tables from matching column names and key uniqueness.", obj(json!({}), &[])),
+        // ---- whole-app control
+        s("get_project", "Read any part of the project document as JSON by JSON pointer (e.g. '' for an overview, '/report/pages/0', '/model/measures', '/queries/queries', '/sheets/0', '/studio/0', '/report/theme'). Use this to discover structure before edit_project.", obj(json!({"path": {"type": "string"}}), &[])),
+        s(
+            "edit_project",
+            "Edit ANY part of the project document (full control: report, pages, visuals, shapes, themes, bookmarks, stories, model, queries, sheets, flows, notebooks, studio workflows, publish settings). op = set (replace the value at path), append (push value onto the array at path) or remove. The edit is validated; invalid edits are rejected. New elements need unique ids above /idSeed (and raise idSeed).",
+            obj(json!({"op": {"type": "string", "enum": ["set", "append", "remove"]}, "path": {"type": "string"}, "value": {}}), &["op", "path"]),
+        ),
+        s("get_tmdl", "Return the semantic model as TMDL code (tables, columns, measures, relationships).", obj(json!({}), &[])),
+        s("apply_tmdl", "Apply a TMDL script to the model (create or alter measures, columns, tables, relationships), like Power BI's TMDL view.", obj(json!({"script": {"type": "string"}}), &["script"])),
+        s("add_relationship", "Create a relationship 'from' (many side) → 'to' (one side), fields as Table[Column].", obj(json!({"from": {"type": "string"}, "to": {"type": "string"}, "cardinality": {"type": "string", "enum": ["manyToOne", "oneToOne", "oneToMany", "manyToMany"]}, "bothDirections": {"type": "boolean"}}), &["from", "to"])),
+        s("add_calculated_column", "Add (or replace) a DAX calculated column on a table.", obj(json!({"table": {"type": "string"}, "name": {"type": "string"}, "dax": {"type": "string"}}), &["table", "name", "dax"])),
+        s("update_query", "Replace the M code of an existing Power Query query and refresh.", obj(json!({"name": {"type": "string"}, "m": {"type": "string"}}), &["name", "m"])),
+        s("delete", "Delete something: kind = element | page | measure | column | query | relationship | sheet | flow | workflow | bookmark; target = id or name.", obj(json!({"kind": {"type": "string"}, "target": {"type": "string"}}), &["kind", "target"])),
+        s("move_element", "Move / resize an element (id, 'selected' or 'last').", obj(json!({"element": {"type": "string"}, "x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"}}), &["element"])),
+        s("add_text", "Add a text box to the current page. Text can contain live values: {[Measure]}, {[Measure]:$#,0}, {Selected:Region}.", obj(json!({"text": {"type": "string"}, "x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"}, "size": {"type": "number"}, "bold": {"type": "boolean"}, "color": {"type": "string"}}), &["text"])),
+        s("add_shape", "Add a Figma-style shape to the current page: rectangle, roundedRectangle, ellipse, line, arrow, triangle, star…", obj(json!({"shape": {"type": "string"}, "x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"}, "fill": {"type": "string"}, "text": {"type": "string"}}), &["shape"])),
+        s("create_sheet", "Create an Excel-like data sheet (row 1 = headers) that loads into the model as a table.", obj(json!({"name": {"type": "string"}, "rows": {"type": "array", "items": {"type": "array", "items": {}}}}), &["name", "rows"])),
+        s("set_cells", "Write values or formulas (=SUM(B2:B9)) into a data sheet starting at a cell like 'B2'; rows is a 2-D array.", obj(json!({"sheet": {"type": "string"}, "start": {"type": "string"}, "rows": {"type": "array", "items": {"type": "array", "items": {}}}}), &["sheet", "start", "rows"])),
+        s("create_workflow", "Create a Data Science Studio workflow, empty or from an example: high_margin (classification), ols (regression and tests), arima (forecasting), segments (clustering).", obj(json!({"name": {"type": "string"}, "example": {"type": "string"}}), &[])),
+        s("add_widget", "Add a widget to a Studio workflow (kinds like data.table, model.forest, eval.test_score, stats.ols, unsup.kmeans, deploy.register) with settings, optionally connected from another widget id.", obj(json!({"workflow": {"type": "string"}, "kind": {"type": "string"}, "settings": {"type": "object"}, "connect_from": {"type": "integer"}}), &["workflow", "kind"])),
+        s("refresh", "Re-run all queries and rebuild the model.", obj(json!({}), &[])),
+        s("navigate", "Show a view to the user: report, table-view, model, dax, tmdl, sheet, flow, story, sql, studio, formulator, ai, power-query; optionally a page (name or id).", obj(json!({"view": {"type": "string"}, "page": {"type": "string"}}), &["view"])),
+        s("app_command", "Run an app command: save, undo, redo, publish, reading-view.", obj(json!({"command": {"type": "string"}}), &["command"])),
     ]
 }
 
@@ -153,6 +182,38 @@ pub fn execute(ws: &mut Workspace, call: &ToolCall) -> ToolOutcome {
         "explain_visual" => explain_visual(ws, &s("element")),
         "create_query" => create_query(ws, &s("name"), &s("m")),
         "suggest_relationships" => suggest_relationships(ws),
+        "get_project" => get_project(ws, &s("path")),
+        "edit_project" => edit_project(ws, &s("op"), &s("path"), a.get("value").cloned()),
+        "get_tmdl" => ok(json!({"tmdl": vizcraft_core::tmdl::write(ws.project, ws.built)}), "Read the model as TMDL"),
+        "apply_tmdl" => apply_tmdl(ws, &s("script")),
+        "add_relationship" => add_relationship(ws, &s("from"), &s("to"), &s("cardinality"), a.get("bothDirections").and_then(Value::as_bool).unwrap_or(false)),
+        "add_calculated_column" => add_calc_column(ws, &s("table"), &s("name"), &s("dax")),
+        "update_query" => update_query(ws, &s("name"), &s("m")),
+        "delete" => delete(ws, &s("kind"), &s("target")),
+        "move_element" => move_element(ws, &s("element"), a),
+        "add_text" => add_text(ws, a),
+        "add_shape" => add_shape(ws, a),
+        "create_sheet" => create_sheet(ws, &s("name"), a.get("rows").cloned().unwrap_or(json!([]))),
+        "set_cells" => set_cells(ws, &s("sheet"), &s("start"), a.get("rows").cloned().unwrap_or(json!([]))),
+        "create_workflow" => create_workflow(ws, &s("name"), &s("example")),
+        "add_widget" => add_widget(ws, &s("workflow"), &s("kind"), a.get("settings").cloned(), a.get("connect_from").and_then(Value::as_u64)),
+        "refresh" => {
+            refresh(ws);
+            let errs: Vec<String> = ws.built.errors.iter().map(|(o, e)| format!("{o}: {e}")).collect();
+            let mut o = ok(json!({"tables": ws.built.tables.len(), "errors": errs}), format!("Refreshed {} tables", ws.built.tables.len()));
+            o.mutated = true;
+            o
+        }
+        "navigate" => {
+            let mut o = ok(json!({"shown": s("view")}), format!("Opened {}", s("view")));
+            o.actions.push(json!({"action": "navigate", "view": s("view"), "page": s("page")}));
+            o
+        }
+        "app_command" => {
+            let mut o = ok(json!({"command": s("command")}), format!("Ran {}", s("command")));
+            o.actions.push(json!({"action": s("command")}));
+            o
+        }
         other => fail(format!("Unknown tool `{other}`.")),
     }
 }
@@ -620,6 +681,481 @@ fn create_query(ws: &mut Workspace, name: &str, m: &str) -> ToolOutcome {
 }
 
 /// Candidate relationships: same column name in two tables, unique on the "one" side.
+// ============================================================== whole-app control
+
+/// Shortens big JSON for the model: long arrays keep their first items and a count.
+fn trim_json(v: &Value, depth: usize) -> Value {
+    match v {
+        Value::Array(a) if a.len() > 40 => {
+            let mut out: Vec<Value> = a.iter().take(40).map(|x| trim_json(x, depth + 1)).collect();
+            out.push(json!(format!("… {} more items", a.len() - 40)));
+            Value::Array(out)
+        }
+        Value::Array(a) => Value::Array(a.iter().map(|x| trim_json(x, depth + 1)).collect()),
+        Value::Object(m) => Value::Object(m.iter().map(|(k, x)| (k.clone(), trim_json(x, depth + 1))).collect()),
+        Value::String(s) if s.len() > 4000 => json!(format!("{}… ({} chars)", &s[..s.char_indices().nth(4000).map(|(i, _)| i).unwrap_or(s.len())], s.len())),
+        x => x.clone(),
+    }
+}
+
+fn get_project(ws: &mut Workspace, path: &str) -> ToolOutcome {
+    let doc = serde_json::to_value(&*ws.project).unwrap_or(Value::Null);
+    if path.is_empty() || path == "/" {
+        // An overview: top-level keys with sizes, page and element names.
+        let pages: Vec<Value> = ws.project.report.pages.iter().enumerate().map(|(i, p)| json!({"index": i, "id": p.id, "name": p.name, "elements": p.elements.iter().map(|e| json!({"id": e.id, "name": e.name, "kind": e.kind_label()})).collect::<Vec<_>>()})).collect();
+        let keys: Vec<Value> = doc.as_object().map(|m| m.iter().map(|(k, v)| json!({"key": k, "size": v.to_string().len()})).collect()).unwrap_or_default();
+        return ok(json!({"keys": keys, "pages": pages, "currentPage": *ws.page, "idSeed": ws.project.id_seed}), "Read the project overview");
+    }
+    match doc.pointer(path) {
+        Some(v) => ok(trim_json(v, 0), format!("Read {path}")),
+        None => fail(format!("Nothing at `{path}`. Call get_project with path '' for an overview.")),
+    }
+}
+
+fn edit_project(ws: &mut Workspace, op: &str, path: &str, value: Option<Value>) -> ToolOutcome {
+    if path.is_empty() || !path.starts_with('/') {
+        return fail("path must be a JSON pointer like /report/pages/0/name");
+    }
+    let mut doc = serde_json::to_value(&*ws.project).unwrap_or(Value::Null);
+    let (parent_path, last) = path.rsplit_once('/').unwrap_or(("", path));
+    let last = last.replace("~1", "/").replace("~0", "~");
+    let res: Result<(), String> = (|| {
+        match op {
+            "set" => {
+                let v = value.clone().ok_or("set needs a value")?;
+                let target = doc.pointer_mut(path).ok_or(format!("Nothing at `{path}`"))?;
+                *target = v;
+            }
+            "append" => {
+                let v = value.clone().ok_or("append needs a value")?;
+                match doc.pointer_mut(path) {
+                    Some(Value::Array(a)) => a.push(v),
+                    _ => return Err(format!("`{path}` is not an array")),
+                }
+            }
+            "remove" => match doc.pointer_mut(parent_path) {
+                Some(Value::Array(a)) => {
+                    let i: usize = last.parse().map_err(|_| format!("`{last}` is not an index"))?;
+                    if i >= a.len() {
+                        return Err(format!("index {i} out of range"));
+                    }
+                    a.remove(i);
+                }
+                Some(Value::Object(m)) => {
+                    m.remove(&last).ok_or(format!("No key `{last}`"))?;
+                }
+                _ => return Err(format!("Nothing at `{parent_path}`")),
+            },
+            other => return Err(format!("Unknown op `{other}` (set, append, remove)")),
+        }
+        Ok(())
+    })();
+    if let Err(e) = res {
+        return fail(e);
+    }
+    let new: Project = match serde_json::from_value(doc) {
+        Ok(p) => p,
+        Err(e) => return fail(format!("That edit doesn't fit the project schema and was not applied: {e}. Read the surrounding JSON with get_project first.")),
+    };
+    // Keep ids unique: raise the seed above every id now in use.
+    let max_id = serde_json::to_string(&new).ok().map(|s| max_numeric_id(&s)).unwrap_or(0);
+    *ws.project = new;
+    if ws.project.id_seed < max_id {
+        ws.project.id_seed = max_id;
+    }
+    if ws.project.page(*ws.page).is_none() {
+        *ws.page = ws.project.report.pages.first().map(|p| p.id).unwrap_or(0);
+    }
+    if path.starts_with("/queries") || path.starts_with("/sheets") || path.starts_with("/flows") {
+        refresh(ws);
+    } else {
+        rebuild(ws);
+    }
+    let errs: Vec<String> = ws.built.errors.iter().take(5).map(|(o, e)| format!("{o}: {e}")).collect();
+    let mut o = ok(json!({"applied": op, "path": path, "modelErrors": errs}), format!("Edited {path}"));
+    o.mutated = true;
+    o
+}
+
+/// The largest `"id": N` in a JSON text.
+fn max_numeric_id(s: &str) -> u64 {
+    let mut best = 0;
+    for (i, _) in s.match_indices("\"id\":") {
+        let rest = s[i + 5..].trim_start();
+        let n: String = rest.chars().take_while(char::is_ascii_digit).collect();
+        if let Ok(v) = n.parse::<u64>() {
+            best = best.max(v);
+        }
+    }
+    best
+}
+
+fn apply_tmdl(ws: &mut Workspace, script: &str) -> ToolOutcome {
+    let before = ws.project.model.clone();
+    match vizcraft_core::tmdl::apply_with(ws.project, Some(ws.built), script) {
+        Ok(changes) => {
+            rebuild(ws);
+            let errs: Vec<String> = ws.built.errors.iter().take(5).map(|(o, e)| format!("{o}: {e}")).collect();
+            if !errs.is_empty() && ws.built.errors.len() > 0 && changes.is_empty() {
+                ws.project.model = before;
+                rebuild(ws);
+                return fail(format!("TMDL applied nothing: {}", errs.join("; ")));
+            }
+            let mut o = ok(json!({"changes": changes, "modelErrors": errs}), format!("Applied TMDL ({} change(s))", changes.len()));
+            o.mutated = true;
+            o
+        }
+        Err(e) => fail(format!("TMDL error: {e}")),
+    }
+}
+
+fn split_field(s: &str) -> Option<(String, String)> {
+    let s = s.trim();
+    let (t, c) = s.split_once('[')?;
+    Some((t.trim().trim_matches('\'').to_string(), c.trim_end_matches(']').to_string()))
+}
+
+fn add_relationship(ws: &mut Workspace, from: &str, to: &str, card: &str, both: bool) -> ToolOutcome {
+    let (Some((ft, fc)), Some((tt, tc))) = (split_field(from), split_field(to)) else { return fail("Fields must look like Table[Column].") };
+    for (t, c) in [(&ft, &fc), (&tt, &tc)] {
+        if ws.built.table(t).and_then(|d| d.column_index(c)).is_none() {
+            return fail(format!("No column {t}[{c}]."));
+        }
+    }
+    let id = ws.project.next_id();
+    let cardinality = match card {
+        "oneToOne" => Cardinality::OneToOne,
+        "oneToMany" => Cardinality::OneToMany,
+        "manyToMany" => Cardinality::ManyToMany,
+        _ => Cardinality::ManyToOne,
+    };
+    let active = !ws.project.model.relationships.iter().any(|r| r.active && ((r.from_table == ft && r.to_table == tt) || (r.from_table == tt && r.to_table == ft)));
+    ws.project.model.relationships.push(Relationship { id, from_table: ft.clone(), from_column: fc.clone(), to_table: tt.clone(), to_column: tc.clone(), cardinality, cross_filter: if both { CrossFilterDir::Both } else { CrossFilterDir::Single }, active, ..Default::default() });
+    rebuild(ws);
+    let mut o = ok(json!({"relationship": id, "active": active}), format!("Related {ft}[{fc}] → {tt}[{tc}]{}", if active { "" } else { " (inactive: another path exists)" }));
+    o.mutated = true;
+    o
+}
+
+fn add_calc_column(ws: &mut Workspace, table: &str, name: &str, dax: &str) -> ToolOutcome {
+    let Some(t) = ws.project.model.tables.iter().find(|t| t.name.eq_ignore_ascii_case(table)).map(|t| t.name.clone()) else { return fail(format!("No table `{table}`.")) };
+    let before = ws.project.model.calculated_columns.clone();
+    ws.project.model.calculated_columns.retain(|c| !(c.table == t && c.name.eq_ignore_ascii_case(name)));
+    ws.project.model.calculated_columns.push(CalcColumn { table: t.clone(), name: name.to_string(), expression: dax.trim().trim_start_matches('=').trim().to_string(), origin: "Copilot".into() });
+    rebuild(ws);
+    if let Some((_, e)) = ws.built.errors.iter().find(|(o, _)| o.contains(name)) {
+        let e = e.clone();
+        ws.project.model.calculated_columns = before;
+        rebuild(ws);
+        return fail(format!("The column didn't compute and was not added: {e}"));
+    }
+    let mut o = ok(json!({"table": t, "column": name}), format!("Added column {t}[{name}]"));
+    o.mutated = true;
+    o
+}
+
+fn update_query(ws: &mut Workspace, name: &str, m: &str) -> ToolOutcome {
+    let Some(q) = ws.project.queries.queries.iter_mut().find(|q| q.name.eq_ignore_ascii_case(name)) else { return fail(format!("No query `{name}`.")) };
+    let old = std::mem::replace(&mut q.m, m.to_string());
+    let qname = q.name.clone();
+    if let Err(e) = eval_m(ws.project, &format!("#\"{}\"", qname.replace('"', "\"\""))) {
+        if let Some(q) = ws.project.queries.query_mut(&qname) {
+            q.m = old;
+        }
+        return fail(format!("The new M didn't evaluate and was not kept: {e}"));
+    }
+    refresh(ws);
+    let mut o = ok(json!({"query": qname, "rows": ws.built.table(&qname).map(|d| d.len())}), format!("Updated query {qname}"));
+    o.mutated = true;
+    o
+}
+
+fn delete(ws: &mut Workspace, kind: &str, target: &str) -> ToolOutcome {
+    let t = target.trim();
+    let id: Option<u64> = t.parse().ok();
+    let eq = |a: &str| a.eq_ignore_ascii_case(t);
+    let removed = match kind {
+        "element" | "visual" => {
+            let eid = find_element(ws, t);
+            let mut n = 0;
+            for p in &mut ws.project.report.pages {
+                let before = p.elements.len();
+                p.elements.retain(|e| eid.is_none() || (Some(e.id) != eid && e.parent != eid));
+                n += before - p.elements.len();
+            }
+            n
+        }
+        "page" => {
+            let before = ws.project.report.pages.len();
+            if before <= 1 {
+                return fail("A report keeps at least one page.");
+            }
+            ws.project.report.pages.retain(|p| !(Some(p.id) == id || eq(&p.name)));
+            if ws.project.page(*ws.page).is_none() {
+                *ws.page = ws.project.report.pages[0].id;
+            }
+            before - ws.project.report.pages.len()
+        }
+        "measure" => {
+            let b = ws.project.model.measures.len();
+            ws.project.model.measures.retain(|m| !eq(&m.name) && !eq(&format!("[{}]", m.name)));
+            b - ws.project.model.measures.len()
+        }
+        "column" => {
+            let b = ws.project.model.calculated_columns.len();
+            let (tt, cc) = split_field(t).unwrap_or_default();
+            ws.project.model.calculated_columns.retain(|c| !(c.name.eq_ignore_ascii_case(if cc.is_empty() { t } else { &cc }) && (tt.is_empty() || c.table.eq_ignore_ascii_case(&tt))));
+            b - ws.project.model.calculated_columns.len()
+        }
+        "query" => {
+            let b = ws.project.queries.queries.len();
+            ws.project.queries.queries.retain(|q| !eq(&q.name));
+            b - ws.project.queries.queries.len()
+        }
+        "relationship" => {
+            let b = ws.project.model.relationships.len();
+            ws.project.model.relationships.retain(|r| Some(r.id) != id);
+            b - ws.project.model.relationships.len()
+        }
+        "sheet" => {
+            let b = ws.project.sheets.len();
+            ws.project.sheets.retain(|s| !eq(&s.name));
+            b - ws.project.sheets.len()
+        }
+        "flow" => {
+            let b = ws.project.flows.len();
+            ws.project.flows.retain(|s| !eq(&s.name));
+            b - ws.project.flows.len()
+        }
+        "workflow" => {
+            let b = ws.project.studio.len();
+            ws.project.studio.retain(|s| !eq(&s.name));
+            b - ws.project.studio.len()
+        }
+        "bookmark" => {
+            let b = ws.project.report.bookmarks.len();
+            ws.project.report.bookmarks.retain(|s| !(Some(s.id) == id || eq(&s.name)));
+            b - ws.project.report.bookmarks.len()
+        }
+        other => return fail(format!("Can't delete a `{other}`.")),
+    };
+    if removed == 0 {
+        return fail(format!("No {kind} `{t}`."));
+    }
+    if matches!(kind, "query" | "sheet" | "flow") {
+        refresh(ws);
+    } else {
+        rebuild(ws);
+    }
+    let mut o = ok(json!({"deleted": removed}), format!("Deleted {kind} {t}"));
+    o.mutated = true;
+    o
+}
+
+fn move_element(ws: &mut Workspace, which: &str, a: &Value) -> ToolOutcome {
+    let Some(id) = find_element(ws, which) else { return fail(format!("No element `{which}`.")) };
+    let Some(e) = ws.project.element_mut(id) else { return fail("No element.") };
+    let f = |k: &str| a.get(k).and_then(Value::as_f64).map(|v| v as f32);
+    if let Some(v) = f("x") {
+        e.x = v;
+    }
+    if let Some(v) = f("y") {
+        e.y = v;
+    }
+    if let Some(v) = f("w") {
+        e.w = v.max(8.0);
+    }
+    if let Some(v) = f("h") {
+        e.h = v.max(8.0);
+    }
+    let mut o = ok(json!({"element": id, "x": e.x, "y": e.y, "w": e.w, "h": e.h}), format!("Moved #{id}"));
+    o.mutated = true;
+    o.elements = vec![id];
+    o
+}
+
+fn place(ws: &mut Workspace, a: &Value, w: f32, h: f32) -> (f32, f32, f32, f32) {
+    let w = a.get("w").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(w);
+    let h = a.get("h").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(h);
+    let (fx, fy) = ws.project.page(*ws.page).map(|p| free_spot(p, w, h)).unwrap_or((40.0, 40.0));
+    (a.get("x").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(fx), a.get("y").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(fy), w, h)
+}
+
+fn push_element(ws: &mut Workspace, mut e: Element, summary: String) -> ToolOutcome {
+    let id = ws.project.next_id();
+    e.id = id;
+    let Some(p) = ws.project.page_mut(*ws.page) else { return fail("No current page.") };
+    p.elements.push(e);
+    let mut o = ok(json!({"element": id}), summary);
+    o.mutated = true;
+    o.elements = vec![id];
+    o
+}
+
+fn add_text(ws: &mut Workspace, a: &Value) -> ToolOutcome {
+    let text = a.get("text").and_then(Value::as_str).unwrap_or("").to_string();
+    let (x, y, w, h) = place(ws, a, 360.0, 60.0);
+    let mut rt = RichText::plain(&text);
+    for r in &mut rt.runs {
+        if let Some(sz) = a.get("size").and_then(Value::as_f64) {
+            r.size = sz as f32;
+        }
+        if let Some(b) = a.get("bold").and_then(Value::as_bool) {
+            r.bold = b;
+        }
+        if let Some(c) = a.get("color").and_then(Value::as_str).and_then(vizcraft_core::color::Color::parse) {
+            r.color = Some(Prop::Color(c));
+        }
+    }
+    let e = Element { name: "Text".into(), x, y, w, h, kind: ElementKind::Text(TextSpec { text: rt, smart_narrative: false }), ..Element::default() };
+    push_element(ws, e, format!("Added text \"{}\"", text.chars().take(40).collect::<String>()))
+}
+
+fn add_shape(ws: &mut Workspace, a: &Value) -> ToolOutcome {
+    let name = a.get("shape").and_then(Value::as_str).unwrap_or("rectangle");
+    let shape: ShapeKind = serde_json::from_value(json!(name)).or_else(|_| serde_json::from_value(json!(cap(name)))).unwrap_or_default();
+    let (x, y, w, h) = place(ws, a, 200.0, 120.0);
+    let mut spec = ShapeSpec { shape, ..ShapeSpec::default() };
+    if let Some(c) = a.get("fill").and_then(Value::as_str).and_then(vizcraft_core::color::Color::parse) {
+        spec.fill = Fill::Solid(c);
+    }
+    if let Some(t) = a.get("text").and_then(Value::as_str) {
+        spec.text = RichText::plain(t);
+    }
+    let e = Element { name: format!("{shape:?}"), x, y, w, h, kind: ElementKind::Shape(spec), ..Element::default() };
+    push_element(ws, e, format!("Added a {name}"))
+}
+
+fn cell_rows(v: &Value) -> Vec<Vec<String>> {
+    v.as_array()
+        .map(|rows| {
+            rows.iter()
+                .map(|r| {
+                    r.as_array()
+                        .map(|c| {
+                            c.iter()
+                                .map(|x| match x {
+                                    Value::String(s) => s.clone(),
+                                    Value::Null => String::new(),
+                                    o => o.to_string(),
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default()
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn create_sheet(ws: &mut Workspace, name: &str, rows: Value) -> ToolOutcome {
+    if name.is_empty() {
+        return fail("A sheet needs a name.");
+    }
+    if ws.project.sheets.iter().any(|s| s.name.eq_ignore_ascii_case(name)) || ws.project.model.tables.iter().any(|t| t.name.eq_ignore_ascii_case(name)) {
+        return fail(format!("`{name}` already exists."));
+    }
+    let cells = cell_rows(&rows);
+    let n = cells.len().saturating_sub(1);
+    ws.project.sheets.push(DataSheet { name: name.to_string(), cells, load: true, ..Default::default() });
+    refresh(ws);
+    let mut o = ok(json!({"sheet": name, "rows": n}), format!("Created sheet {name} ({n} rows)"));
+    o.mutated = true;
+    o
+}
+
+/// "B12" → (row 11, col 1).
+fn parse_cell(s: &str) -> Option<(usize, usize)> {
+    let s = s.trim().to_uppercase();
+    let letters: String = s.chars().take_while(char::is_ascii_alphabetic).collect();
+    let digits: String = s.chars().skip(letters.len()).collect();
+    let mut col = 0usize;
+    for c in letters.chars() {
+        col = col * 26 + (c as usize - 'A' as usize + 1);
+    }
+    let row: usize = digits.parse().ok()?;
+    if col == 0 || row == 0 {
+        return None;
+    }
+    Some((row - 1, col - 1))
+}
+
+fn set_cells(ws: &mut Workspace, sheet: &str, start: &str, rows: Value) -> ToolOutcome {
+    let Some((r0, c0)) = parse_cell(start) else { return fail(format!("`{start}` is not a cell like B2.")) };
+    let Some(sh) = ws.project.sheets.iter_mut().find(|s| s.name.eq_ignore_ascii_case(sheet)) else { return fail(format!("No sheet `{sheet}`.")) };
+    let data = cell_rows(&rows);
+    for (i, row) in data.iter().enumerate() {
+        let r = r0 + i;
+        while sh.cells.len() <= r {
+            sh.cells.push(vec![]);
+        }
+        for (j, v) in row.iter().enumerate() {
+            let c = c0 + j;
+            let line = &mut sh.cells[r];
+            while line.len() <= c {
+                line.push(String::new());
+            }
+            line[c] = v.clone();
+        }
+    }
+    let name = sh.name.clone();
+    refresh(ws);
+    let mut o = ok(json!({"sheet": name, "written": data.iter().map(Vec::len).sum::<usize>()}), format!("Wrote cells in {name} from {start}"));
+    o.mutated = true;
+    o
+}
+
+fn create_workflow(ws: &mut Workspace, name: &str, example: &str) -> ToolOutcome {
+    let mut wf = if example.is_empty() { vizcraft_core::studio::StudioWorkflow::default() } else {
+        match vizcraft_core::studio::examples::build(example) {
+            Some(w) => w,
+            None => return fail(format!("No example `{example}` (high_margin, ols, arima, segments).")),
+        }
+    };
+    if !name.is_empty() {
+        wf.name = name.to_string();
+    } else if wf.name.is_empty() {
+        wf.name = format!("Workflow {}", ws.project.studio.len() + 1);
+    }
+    let widgets: Vec<Value> = wf.widgets.iter().map(|w| json!({"id": w.id, "kind": w.kind, "label": w.label})).collect();
+    let n = wf.name.clone();
+    ws.project.studio.push(wf);
+    let mut o = ok(json!({"workflow": n, "index": ws.project.studio.len() - 1, "widgets": widgets}), format!("Created workflow {n}"));
+    o.mutated = true;
+    o.actions.push(json!({"action": "navigate", "view": "studio"}));
+    o
+}
+
+fn add_widget(ws: &mut Workspace, workflow: &str, kind: &str, settings: Option<Value>, from: Option<u64>) -> ToolOutcome {
+    if vizcraft_core::studio::widget_type(kind).is_none() {
+        let kinds: Vec<&str> = vizcraft_core::studio::catalog().iter().map(|w| w.id).collect();
+        return fail(format!("Unknown widget `{kind}`. Kinds: {}", kinds.join(", ")));
+    }
+    let Some(wf) = ws.project.studio.iter_mut().find(|w| w.name.eq_ignore_ascii_case(workflow) || workflow.parse::<usize>().ok().is_some_and(|_| false)) else { return fail(format!("No workflow `{workflow}`.")) };
+    let (x, y) = from.and_then(|f| wf.widget(f)).map(|w| (w.x + 200.0, w.y)).unwrap_or((40.0 + wf.widgets.len() as f32 * 30.0, 60.0 + wf.widgets.len() as f32 * 40.0));
+    let id = wf.add(kind, x, y);
+    if let (Some(Value::Object(m)), Some(w)) = (settings, wf.widget_mut(id)) {
+        for (k, v) in m {
+            w.settings.insert(k, v);
+        }
+    }
+    let mut linked = Value::Null;
+    if let Some(f) = from {
+        let pair = (wf.widget(f).and_then(|w| vizcraft_core::studio::widget_type(&w.kind)), vizcraft_core::studio::widget_type(kind));
+        if let (Some(a), Some(b)) = pair
+            && let Some((op, ip)) = a.outputs.iter().enumerate().find_map(|(oi, o)| b.inputs.iter().position(|i| o.chan.fits(i.chan)).map(|ii| (oi, ii)))
+        {
+            linked = match wf.connect(f, op, id, ip) {
+                Ok(()) => json!(true),
+                Err(e) => json!(e),
+            };
+        }
+    }
+    let mut o = ok(json!({"widget": id, "connected": linked}), format!("Added {kind} to {workflow}"));
+    o.mutated = true;
+    o
+}
+
 pub fn relationship_candidates(p: &Project, built: &Built) -> Vec<(String, String, String, String, f64)> {
     let mut out = Vec::new();
     let tables: Vec<_> = built.tables.values().collect();
@@ -726,5 +1262,57 @@ mod tests {
         assert_eq!(parse_kind("bar"), Some(VisualKind::ClusteredBar));
         assert_eq!(parse_kind("Donut chart"), Some(VisualKind::Donut));
         assert_eq!(parse_kind("zzz"), None);
+    }
+
+    #[test]
+    fn whole_app_tools_edit_everything() {
+        let (mut p, mut b, mut page) = sample();
+        // Read the overview and a pointer.
+        let ov = ws_run(&mut p, &mut b, &mut page, "get_project", json!({"path": ""}));
+        assert!(ov.ok && ov.text.contains("pages"), "{}", ov.text);
+        assert!(ws_run(&mut p, &mut b, &mut page, "get_project", json!({"path": "/report/theme"})).ok);
+        // edit_project: rename a page, reject a schema-breaking edit.
+        let r = ws_run(&mut p, &mut b, &mut page, "edit_project", json!({"op": "set", "path": "/report/pages/0/name", "value": "Overview!"}));
+        assert!(r.ok, "{}", r.text);
+        assert_eq!(p.report.pages[0].name, "Overview!");
+        let bad = ws_run(&mut p, &mut b, &mut page, "edit_project", json!({"op": "set", "path": "/report/pages/0/width", "value": "wide"}));
+        assert!(!bad.ok);
+        // Text and shapes, moving, deleting.
+        let t = ws_run(&mut p, &mut b, &mut page, "add_text", json!({"text": "Sales {[Total Sales]:$#,0}", "size": 20, "bold": true, "color": "#2563EB"}));
+        assert!(t.ok, "{}", t.text);
+        let tid = t.elements[0];
+        let sh = ws_run(&mut p, &mut b, &mut page, "add_shape", json!({"shape": "ellipse", "fill": "#ff0000"}));
+        assert!(sh.ok, "{}", sh.text);
+        assert!(ws_run(&mut p, &mut b, &mut page, "move_element", json!({"element": tid.to_string(), "x": 10, "y": 12})).ok);
+        assert_eq!(p.element(tid).map(|(_, e)| e.x), Some(10.0));
+        assert!(ws_run(&mut p, &mut b, &mut page, "delete", json!({"kind": "element", "target": sh.elements[0].to_string()})).ok);
+        // Model: calculated column, relationship, TMDL round trip.
+        let cc = ws_run(&mut p, &mut b, &mut page, "add_calculated_column", json!({"table": "Sales", "name": "Big", "dax": "IF(Sales[Quantity] > 2, \"Yes\", \"No\")"}));
+        assert!(cc.ok, "{}", cc.text);
+        let tm = ws_run(&mut p, &mut b, &mut page, "get_tmdl", json!({}));
+        assert!(tm.ok && tm.text.contains("measure"), "{}", &tm.text[..200.min(tm.text.len())]);
+        // Sheets and cells feed the model.
+        let sh = ws_run(&mut p, &mut b, &mut page, "create_sheet", json!({"name": "Goals", "rows": [["Region", "Goal"], ["South", 100], ["West", 80]]}));
+        assert!(sh.ok, "{}", sh.text);
+        assert!(ws_run(&mut p, &mut b, &mut page, "set_cells", json!({"sheet": "Goals", "start": "B3", "rows": [[90]]})).ok);
+        assert_eq!(p.sheets.iter().find(|s| s.name == "Goals").map(|s| s.cells[2][1].clone()), Some("90".into()));
+        assert!(b.table("Goals").is_some());
+        let rel = ws_run(&mut p, &mut b, &mut page, "add_relationship", json!({"from": "Goals[Region]", "to": "Targets[Region]", "cardinality": "oneToOne"}));
+        assert!(rel.ok, "{}", rel.text);
+        // Queries.
+        let q = p.queries.queries[0].name.clone();
+        let m = p.queries.queries[0].m.clone();
+        assert!(!ws_run(&mut p, &mut b, &mut page, "update_query", json!({"name": q, "m": "let x = in"})).ok);
+        assert_eq!(p.queries.queries[0].m, m, "a broken query is not kept");
+        // Studio.
+        let wf = ws_run(&mut p, &mut b, &mut page, "create_workflow", json!({"name": "Churn", "example": "high_margin"}));
+        assert!(wf.ok && wf.actions.iter().any(|a| a["view"] == "studio"));
+        let first = p.studio[0].widgets[0].id;
+        let w = ws_run(&mut p, &mut b, &mut page, "add_widget", json!({"workflow": "Churn", "kind": "data.datatable", "connect_from": first}));
+        assert!(w.ok && w.text.contains("true"), "{}", w.text);
+        // Navigation is an app action.
+        let n = ws_run(&mut p, &mut b, &mut page, "navigate", json!({"view": "model"}));
+        assert_eq!(n.actions[0]["view"], "model");
+        assert!(specs().iter().all(|s| !s.description.is_empty()));
     }
 }

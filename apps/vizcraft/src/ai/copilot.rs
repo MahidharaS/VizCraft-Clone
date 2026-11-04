@@ -98,7 +98,7 @@ pub fn ask(app: &mut VizApp, question: String) {
         context.push('\n');
     }
     if let Some(pg) = app.current_page() {
-        context.push_str(&format!("The user is on report page \"{}\" (id {}).", pg.name, pg.id));
+        context.push_str(&format!("The user is in the {} view{}; current report page \"{}\" (id {}).", crate::app::View::ALL.iter().find(|(v, _, _)| *v == app.view).map(|(_, _, l)| *l).unwrap_or("report"), if app.pq_open { " (Power Query Editor open)" } else { "" }, pg.name, pg.id));
     }
     if let Some(id) = app.selected.first() {
         context.push_str(&format!(" Selected element id: {id} (use 'selected')."));
@@ -157,6 +157,7 @@ pub fn exec_tool(app: &mut VizApp, call: &ToolCall) -> ToolOutcome {
                 }
             }
             app.view = crate::app::View::Report;
+            app.pq_open = false;
         }
         if call.name == "add_measure" {
             let a = &call.arguments;
@@ -164,7 +165,39 @@ pub fn exec_tool(app: &mut VizApp, call: &ToolCall) -> ToolOutcome {
             crate::ai::track_measure(app, &g("name"), &g("dax"), &g("format"));
         }
     }
+    for a in &out.actions {
+        apply_action(app, a);
+    }
     out
+}
+
+/// App-level requests from tools: navigation and commands.
+pub fn apply_action(app: &mut VizApp, a: &serde_json::Value) {
+    let g = |k: &str| a.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
+    match g("action").as_str() {
+        "navigate" => {
+            let v = g("view").to_lowercase();
+            if v == "power-query" || v == "pq" || v == "transform" {
+                app.pq_open = true;
+            } else if let Some((view, _, _)) = crate::app::View::ALL.iter().find(|(_, k, label)| *k == v || label.to_lowercase().starts_with(&v)) {
+                app.view = *view;
+                app.pq_open = false;
+            }
+            let page = g("page");
+            if !page.is_empty()
+                && let Some(p) = app.project.report.pages.iter().find(|p| p.name.eq_ignore_ascii_case(&page) || p.id.to_string() == page)
+            {
+                app.page = p.id;
+                app.view = crate::app::View::Report;
+            }
+        }
+        "save" => app.save(false),
+        "undo" => app.undo(),
+        "redo" => app.redo(),
+        "publish" => crate::publish::open(app, "service"),
+        "reading-view" => app.report.reading = !app.report.reading,
+        _ => {}
+    }
 }
 
 pub fn poll(app: &mut VizApp, ctx: &egui::Context) {

@@ -23,6 +23,7 @@ pub mod format;
 pub mod fx;
 pub mod ml;
 pub mod numfmt;
+pub mod project_folder;
 pub mod sample;
 pub mod scene;
 pub mod sheet;

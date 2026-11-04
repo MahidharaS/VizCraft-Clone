@@ -28,6 +28,7 @@ pub mod detect;
 pub mod finetune;
 pub mod formulate;
 pub mod http;
+pub mod installed;
 pub mod provider;
 pub mod settings;
 pub mod tools;

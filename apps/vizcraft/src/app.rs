@@ -93,6 +93,10 @@ pub struct VizApp {
     pub project: Project,
     pub path: Option<PathBuf>,
     pub dirty: bool,
+    /// Last seen modification time of the project on disk (outside edits reload it).
+    pub disk_stamp: Option<std::time::SystemTime>,
+    pub disk_checked: f64,
+    pub disk_warned: bool,
     pub built: Built,
     pub rt: Runtime,
     pub view: View,
@@ -146,6 +150,9 @@ impl VizApp {
             project: Project::new(),
             path: None,
             dirty: false,
+            disk_stamp: None,
+            disk_checked: 0.0,
+            disk_warned: false,
             built: Built::default(),
             rt: Runtime::default(),
             view: View::Report,
@@ -250,9 +257,11 @@ impl VizApp {
     }
 
     pub fn open_path(&mut self, path: PathBuf) {
-        match std::fs::read_to_string(&path).map_err(|e| e.to_string()).and_then(|s| Project::from_json(&s).map_err(|e| e.to_string())) {
+        match vizcraft_core::project_folder::open_any(&path).map_err(|e| e.to_string()) {
             Ok(p) => {
+                let path = if path.is_dir() { vizcraft_core::project_folder::find_pointer(&path).unwrap_or(path) } else { path };
                 self.load_project(p, Some(path.clone()));
+                self.disk_stamp = disk_stamp(&path);
                 self.toast(format!("Opened {}", path.display()));
             }
             Err(e) => self.error(format!("Couldn't open {}: {e}", path.display())),
@@ -260,24 +269,83 @@ impl VizApp {
     }
 
     pub fn open_dialog(&mut self) {
-        if let Some(path) = rfd::FileDialog::new().add_filter("VizCraft project", &["vizc", "json"]).pick_file() {
+        if let Some(path) = rfd::FileDialog::new().add_filter("VizCraft project", &["vizc", "vizp", "json"]).add_filter("VizCraft project folder (Git)", &["vizp"]).pick_file() {
             self.open_path(path);
         }
     }
 
+    /// Saves to the current path, or asks. `.vizp` saves the Git-friendly folder format,
+    /// `.vizc` a single file.
     pub fn save(&mut self, save_as: bool) {
         let path = match (&self.path, save_as) {
             (Some(p), false) => Some(p.clone()),
-            _ => rfd::FileDialog::new().add_filter("VizCraft project", &["vizc"]).set_file_name(format!("{}.vizc", self.project.name)).save_file(),
+            _ => rfd::FileDialog::new()
+                .add_filter("VizCraft project (single file)", &["vizc"])
+                .add_filter("VizCraft project folder (Git, PBIP-style)", &["vizp"])
+                .set_file_name(format!("{}.vizc", self.project.name))
+                .save_file(),
         };
         let Some(path) = path else { return };
-        match std::fs::write(&path, self.project.to_json()) {
+        self.save_to(path);
+    }
+
+    /// Saves as a Git-friendly project folder (asks for the location).
+    pub fn save_as_folder(&mut self) {
+        let Some(dir) = rfd::FileDialog::new().set_title("Choose a folder for the project (a Git repository works well)").pick_folder() else { return };
+        let name = vizcraft_core::project_folder::safe_name(if self.project.name.is_empty() { "Project" } else { &self.project.name });
+        self.save_to(dir.join(format!("{name}.{}", vizcraft_core::project_folder::EXT)));
+    }
+
+    pub fn save_to(&mut self, path: PathBuf) {
+        match vizcraft_core::project_folder::save_any(&self.project, &path) {
             Ok(()) => {
                 self.path = Some(path.clone());
                 self.dirty = false;
+                self.disk_stamp = disk_stamp(&path);
                 self.toast(format!("Saved {}", path.display()));
             }
             Err(e) => self.error(format!("Couldn't save: {e}")),
+        }
+    }
+
+    /// Reloads the project when its files changed on disk (an agent, Git or an editor), as long
+    /// as there are no unsaved edits here. Checked about once a second.
+    pub fn watch_disk(&mut self, ctx: &egui::Context) {
+        let now = ctx.input(|i| i.time);
+        if now - self.disk_checked < 1.0 {
+            return;
+        }
+        self.disk_checked = now;
+        let Some(path) = self.path.clone() else { return };
+        let stamp = disk_stamp(&path);
+        if stamp.is_none() || stamp == self.disk_stamp {
+            return;
+        }
+        if self.dirty {
+            if !self.disk_warned {
+                self.disk_warned = true;
+                self.toast("The project changed on disk; save or reopen to pick up those changes".to_string());
+            }
+            return;
+        }
+        let page = self.page;
+        let view = self.view;
+        match vizcraft_core::project_folder::open_any(&path) {
+            Ok(p) => {
+                self.load_project(p, Some(path.clone()));
+                if self.project.page(page).is_some() {
+                    self.page = page;
+                }
+                self.view = view;
+                self.disk_stamp = stamp;
+                self.disk_warned = false;
+                self.toast("Reloaded: the project changed on disk".to_string());
+            }
+            Err(e) => {
+                // Half-written edits: try again on the next change.
+                self.disk_stamp = stamp;
+                self.error(format!("The project changed on disk but can't be read yet: {e}"));
+            }
         }
     }
 
@@ -431,6 +499,9 @@ impl VizApp {
     fn keys(&mut self, ctx: &egui::Context) {
         // Only text fields keep Ctrl+Z for themselves (grids and canvases may hold focus).
         let typing = ctx.text_edit_focused();
+        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::I))) {
+            self.ai.copilot_open = !self.ai.copilot_open;
+        }
         let (undo, redo, save, open, newp, refresh) = ctx.input_mut(|i| {
             (
                 i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Z)),
@@ -570,12 +641,13 @@ impl eframe::App for VizApp {
             self.rebuild();
         }
         let t = self.tokens();
+        self.watch_disk(&ctx);
         self.keys(&ctx);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.title()));
         crate::ribbon::show(self, ui, &t);
         self.status_bar(ui, &t);
         self.rail(ui, &t);
-        if self.ai.copilot_open && !self.pq_open && matches!(self.view, View::Report | View::Table | View::Model | View::Dax) {
+        if self.ai.copilot_open {
             crate::ai::copilot::pane(self, ui);
         }
         if self.pq_open {
@@ -678,5 +750,14 @@ impl VizApp {
         }
         self.screenshot = Some((path, frames + 1));
         ctx.request_repaint();
+    }
+}
+
+/// When the project at `path` last changed (newest file of a folder project).
+pub fn disk_stamp(path: &std::path::Path) -> Option<std::time::SystemTime> {
+    if path.extension().is_some_and(|e| e == vizcraft_core::project_folder::EXT) {
+        vizcraft_core::project_folder::last_modified(path)
+    } else {
+        std::fs::metadata(path).and_then(|m| m.modified()).ok()
     }
 }

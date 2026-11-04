@@ -32,15 +32,32 @@ pub struct Detected {
     pub info: String,
 }
 
+/// Host:port of Ollama from `OLLAMA_HOST` (default 127.0.0.1:11434).
+fn ollama_host() -> String {
+    let h = std::env::var("OLLAMA_HOST").unwrap_or_default();
+    let h = h.trim().trim_start_matches("http://").trim_start_matches("https://").trim_end_matches('/');
+    if h.is_empty() {
+        return "127.0.0.1:11434".into();
+    }
+    let h = h.replace("0.0.0.0", "127.0.0.1");
+    if h.contains(':') { h } else { format!("{h}:11434") }
+}
+
+/// Probes use 127.0.0.1 (not `localhost`): on macOS `localhost` can resolve to ::1 first while
+/// Ollama and llama.cpp listen on IPv4 only, which made running servers look absent.
 pub fn default_probes() -> Vec<Probe> {
+    let o = ollama_host();
     let mut v = vec![
-        Probe { label: "Ollama", kind: ServerKind::Llm(ProviderKind::Ollama), base_url: "http://localhost:11434/v1".into(), probe_url: "http://localhost:11434/api/tags".into() },
-        Probe { label: "LM Studio", kind: ServerKind::Llm(ProviderKind::LmStudio), base_url: "http://localhost:1234/v1".into(), probe_url: "http://localhost:1234/v1/models".into() },
-        Probe { label: "llama.cpp server", kind: ServerKind::Llm(ProviderKind::LlamaCpp), base_url: "http://localhost:8080/v1".into(), probe_url: "http://localhost:8080/v1/models".into() },
-        Probe { label: "vLLM", kind: ServerKind::Llm(ProviderKind::Vllm), base_url: "http://localhost:8000/v1".into(), probe_url: "http://localhost:8000/v1/models".into() },
+        Probe { label: "Ollama", kind: ServerKind::Llm(ProviderKind::Ollama), base_url: format!("http://{o}/v1"), probe_url: format!("http://{o}/api/tags") },
+        Probe { label: "LM Studio", kind: ServerKind::Llm(ProviderKind::LmStudio), base_url: "http://127.0.0.1:1234/v1".into(), probe_url: "http://127.0.0.1:1234/v1/models".into() },
+        Probe { label: "llama.cpp server", kind: ServerKind::Llm(ProviderKind::LlamaCpp), base_url: "http://127.0.0.1:8080/v1".into(), probe_url: "http://127.0.0.1:8080/v1/models".into() },
+        Probe { label: "vLLM", kind: ServerKind::Llm(ProviderKind::Vllm), base_url: "http://127.0.0.1:8000/v1".into(), probe_url: "http://127.0.0.1:8000/v1/models".into() },
+        Probe { label: "MLX server", kind: ServerKind::Llm(ProviderKind::LlamaCpp), base_url: "http://127.0.0.1:8081/v1".into(), probe_url: "http://127.0.0.1:8081/v1/models".into() },
+        Probe { label: "Jan", kind: ServerKind::Llm(ProviderKind::LmStudio), base_url: "http://127.0.0.1:1337/v1".into(), probe_url: "http://127.0.0.1:1337/v1/models".into() },
+        Probe { label: "GPT4All", kind: ServerKind::Llm(ProviderKind::LmStudio), base_url: "http://127.0.0.1:4891/v1".into(), probe_url: "http://127.0.0.1:4891/v1/models".into() },
     ];
     for port in [3000, 8765] {
-        v.push(Probe { label: "OpenJEV helper", kind: ServerKind::OpenJev, base_url: format!("http://localhost:{port}"), probe_url: format!("http://localhost:{port}/v1/version") });
+        v.push(Probe { label: "OpenJEV helper", kind: ServerKind::OpenJev, base_url: format!("http://127.0.0.1:{port}"), probe_url: format!("http://127.0.0.1:{port}/v1/version") });
     }
     v
 }

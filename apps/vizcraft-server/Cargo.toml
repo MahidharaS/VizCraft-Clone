@@ -12,6 +12,7 @@ workspace = true
 vizcraft-core = { workspace = true }
 vizcraft-publish = { workspace = true }
 vizcraft-connectors = { workspace = true }
+vizcraft-ai = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tiny_http = { workspace = true }

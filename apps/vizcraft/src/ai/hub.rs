@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use egui::{Color32, RichText, Ui};
 use vizcraft_ai::decide::{Decide, Decision, LlmDecider, OpenJevDecider, Question, decide_with_fallback};
 use vizcraft_ai::detect::{self, Detected, ServerKind};
+use vizcraft_ai::installed::{self, Installed};
 use vizcraft_ai::provider::{ChatRequest, Message, ProviderKind};
 use vizcraft_ai::settings::DecisionBackend;
 
@@ -22,6 +23,15 @@ pub struct HubUi {
     scan: Option<Receiver<Vec<Detected>>>,
     pub detected: Option<Vec<Detected>>,
     pub scanning: bool,
+    /// Models installed on disk (Ollama store, LM Studio, GGUF files, Hugging Face cache).
+    pub installed: Option<Vec<Installed>>,
+    inst_scan: Option<Receiver<Vec<Installed>>>,
+    /// A server being started: (label, deadline, base url, model to select).
+    starting: Option<(String, Instant, String, Installed)>,
+    pub start_error: Option<String>,
+    /// The startup scan ran (auto-selects a local model when nothing is configured).
+    pub auto_scanned: bool,
+    auto_pick: bool,
     test: Option<Receiver<Result<(String, f64), String>>>,
     pub test_result: Option<Result<(String, f64), String>>,
     decision: Option<Receiver<(Decision, Option<String>)>>,
@@ -31,6 +41,49 @@ pub struct HubUi {
 }
 
 pub fn poll(app: &mut VizApp, ctx: &egui::Context) {
+    // At startup, look for local models in the background; with no model configured, pick a
+    // running local one so Copilot works out of the box.
+    if !app.ai.hub.auto_scanned {
+        app.ai.hub.auto_scanned = true;
+        app.ai.hub.auto_pick = !app.ai.settings.has_llm();
+        start_scan(app);
+    }
+    if let Some(rx) = &app.ai.hub.inst_scan
+        && let Ok(v) = rx.try_recv()
+    {
+        app.ai.hub.installed = Some(v);
+        app.ai.hub.inst_scan = None;
+    }
+    // A server we started: rescan until it answers (or give up after the deadline).
+    if let Some((label, deadline, base, model)) = app.ai.hub.starting.clone() {
+        let up = app.ai.hub.detected.iter().flatten().any(|d| d.probe.base_url == base);
+        if up {
+            app.ai.hub.starting = None;
+            let kind = match model.runtime {
+                "Ollama" => ProviderKind::Ollama,
+                "LM Studio" => ProviderKind::LmStudio,
+                _ => ProviderKind::LlamaCpp,
+            };
+            let name = if model.runtime == "Ollama" { Some(model.name.clone()) } else { app.ai.hub.detected.iter().flatten().find(|d| d.probe.base_url == base).and_then(|d| d.models.first().cloned()) };
+            use_local(app, kind, &base, name);
+            app.toast(format!("{label} is running"));
+        } else if Instant::now() > deadline {
+            app.ai.hub.starting = None;
+            app.ai.hub.start_error = Some(format!("{label} didn't answer on {base} within 30 s. Start it in a terminal: {}", installed::serve_command(&model).unwrap_or_default()));
+        } else if !app.ai.hub.scanning {
+            start_scan(app);
+        }
+        ctx.request_repaint_after(Duration::from_millis(400));
+    }
+    if app.ai.hub.auto_pick && !app.ai.hub.scanning && app.ai.hub.detected.is_some() {
+        app.ai.hub.auto_pick = false;
+        if !app.ai.settings.has_llm()
+            && let Some(d) = app.ai.hub.detected.iter().flatten().find(|d| matches!(d.probe.kind, ServerKind::Llm(_)) && !d.models.is_empty()).cloned()
+            && let ServerKind::Llm(kind) = d.probe.kind
+        {
+            use_local(app, kind, &d.probe.base_url, d.models.first().cloned());
+        }
+    }
     let h = &mut app.ai.hub;
     let mut busy = false;
     if let Some(rx) = &h.scan {
@@ -326,7 +379,7 @@ fn local_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
         ui.horizontal(|ui| {
             h2(ui, "Models running on this machine");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.add_enabled(!app.ai.hub.scanning, egui::Button::new("Scan")).on_hover_text("Probe Ollama (11434), LM Studio (1234), llama.cpp (8080), vLLM (8000) and the OpenJEV helper (3000, 8765)").clicked() {
+                if ui.add_enabled(!app.ai.hub.scanning, egui::Button::new("Scan")).on_hover_text("Probe Ollama (11434), LM Studio (1234), llama.cpp (8080), vLLM (8000), MLX (8081), Jan (1337), GPT4All (4891), OpenJEV (3000, 8765) and list models installed on disk").clicked() {
                     start_scan(app);
                 }
                 if app.ai.hub.scanning {
@@ -371,6 +424,79 @@ fn local_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
             }
         }
     });
+    if app.ai.hub.detected.is_none() && !app.ai.hub.scanning {
+        start_scan(app);
+    }
+    card(ui, t, |ui| {
+        ui.horizontal(|ui| {
+            h2(ui, "Installed on this computer");
+            if app.ai.hub.inst_scan.is_some() {
+                ui.add(egui::Spinner::new().size(14.0));
+            }
+            if let Some((label, ..)) = &app.ai.hub.starting {
+                ui.add(egui::Spinner::new().size(14.0));
+                ui.label(RichText::new(format!("starting {label}…")).size(11.0).color(t.muted));
+            }
+        });
+        ui.label(RichText::new("Models found on disk: Ollama (~/.ollama), LM Studio (~/.lmstudio), GGUF files (llama.cpp) and the Hugging Face cache, including MLX. Start & use launches the right server for you.").size(11.0).color(t.muted));
+        if let Some(e) = app.ai.hub.start_error.clone() {
+            ui.label(RichText::new(e).size(11.0).color(t.danger));
+        }
+        let list = app.ai.hub.installed.clone().unwrap_or_default();
+        if list.is_empty() && app.ai.hub.installed.is_some() {
+            ui.label(RichText::new("No models found on disk. Install one, e.g. `ollama pull qwen2.5:7b-instruct`, then Scan.").color(t.muted));
+        }
+        let running: Vec<Detected> = app.ai.hub.detected.clone().unwrap_or_default();
+        let mut action: Option<(Installed, bool)> = None;
+        egui::ScrollArea::vertical().id_salt("ai-installed").max_height(260.0).show(ui, |ui| {
+            egui::Grid::new("ai-inst-grid").striped(true).spacing([14.0, 4.0]).show(ui, |ui| {
+                for m in &list {
+                    ui.label(RichText::new(m.runtime).size(11.0).color(t.muted));
+                    ui.label(RichText::new(&m.name).size(11.5));
+                    ui.label(RichText::new(m.size_label()).size(11.0).color(t.muted));
+                    let server = running.iter().find(|d| match m.runtime {
+                        "Ollama" => d.probe.label == "Ollama",
+                        "LM Studio" => d.probe.label == "LM Studio",
+                        "MLX" => d.probe.label == "MLX server",
+                        _ => d.probe.label == "llama.cpp server",
+                    });
+                    let loaded = server.is_some_and(|d| m.runtime != "Ollama" || d.models.iter().any(|x| x == &m.name));
+                    match (server.is_some(), m.runtime) {
+                        (_, "Hugging Face") => {
+                            ui.label(RichText::new("serve with vLLM or convert to GGUF").size(10.5).color(t.muted));
+                        }
+                        (true, _) if loaded || m.runtime == "Ollama" => {
+                            if ui.button("Use").clicked() {
+                                action = Some((m.clone(), false));
+                            }
+                        }
+                        _ => {
+                            if ui.button("Start & use").on_hover_text(installed::serve_command(m).unwrap_or_default()).clicked() {
+                                action = Some((m.clone(), true));
+                            }
+                        }
+                    }
+                    ui.end_row();
+                }
+            });
+        });
+        if let Some((m, start)) = action {
+            if start {
+                start_and_use(app, &m);
+            } else {
+                let (kind, base) = match m.runtime {
+                    "Ollama" => (ProviderKind::Ollama, running.iter().find(|d| d.probe.label == "Ollama").map(|d| d.probe.base_url.clone()).unwrap_or_default()),
+                    "LM Studio" => (ProviderKind::LmStudio, "http://127.0.0.1:1234/v1".into()),
+                    "MLX" => (ProviderKind::LlamaCpp, "http://127.0.0.1:8081/v1".into()),
+                    _ => (ProviderKind::LlamaCpp, "http://127.0.0.1:8080/v1".into()),
+                };
+                let model = if m.runtime == "Ollama" { Some(m.name.clone()) } else { running.iter().find(|d| d.probe.base_url == base).and_then(|d| d.models.first().cloned()) };
+                use_local(app, kind, &base, model);
+            }
+        }
+        let tools: Vec<String> = ["ollama", "lms", "llama-server", "mlx_lm.server", "vllm"].iter().map(|b| format!("{b} {}", if installed::find_bin(b).is_some() { "✓" } else { "–" })).collect();
+        ui.label(RichText::new(format!("Command-line tools: {}", tools.join("  ·  "))).size(10.5).color(t.muted));
+    });
     ui.columns(2, |cols| {
         let [a, b] = cols else { return };
         card(a, t, |ui| {
@@ -402,6 +528,25 @@ fn start_scan(app: &mut VizApp) {
     });
     app.ai.hub.scan = Some(rx);
     app.ai.hub.scanning = true;
+    if app.ai.hub.inst_scan.is_none() && app.ai.hub.starting.is_none() {
+        let (itx, irx) = channel();
+        std::thread::spawn(move || {
+            let _ = itx.send(installed::scan());
+        });
+        app.ai.hub.inst_scan = Some(irx);
+    }
+}
+
+/// Starts the server for an installed model and selects it once it answers.
+fn start_and_use(app: &mut VizApp, m: &Installed) {
+    app.ai.hub.start_error = None;
+    match installed::start_server(m) {
+        Ok(base) => {
+            app.ai.hub.starting = Some((m.runtime.to_string(), Instant::now() + Duration::from_secs(30), base, m.clone()));
+            app.toast(format!("Starting {}…", m.runtime));
+        }
+        Err(e) => app.ai.hub.start_error = Some(e),
+    }
 }
 
 fn use_local(app: &mut VizApp, kind: ProviderKind, base: &str, model: Option<String>) {
