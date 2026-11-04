@@ -34,6 +34,12 @@ pub struct Project {
     pub publish: PublishSettings,
     /// Next id handed out by [`Project::next_id`].
     pub id_seed: u64,
+    /// Data Science Studio workflows (Orange-style ML / statistics canvases).
+    #[serde(default)]
+    pub studio: Vec<crate::studio::StudioWorkflow>,
+    /// The model registry (registered model versions; mirrored to `~/.vizcraft/models`).
+    #[serde(default)]
+    pub models: Vec<crate::studio::RegisteredModel>,
 }
 
 impl Default for Project {
@@ -49,6 +55,8 @@ impl Default for Project {
             notebooks: vec![],
             publish: PublishSettings::default(),
             id_seed: 1000,
+            studio: vec![],
+            models: vec![],
         }
     }
 }

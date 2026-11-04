@@ -4498,6 +4498,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "vizcraft-mlops"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "vizcraft-core",
+]
+
+[[package]]
+name = "vizcraft-mlserve"
+version = "0.1.0"
+dependencies = [
+ "vizcraft-mlops",
+]
+
+[[package]]
 name = "vizcraft-publish"
 version = "0.1.0"
 dependencies = [

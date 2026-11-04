@@ -27,6 +27,8 @@ pub mod sample;
 pub mod scene;
 pub mod sheet;
 pub mod state;
+pub mod stats;
+pub mod studio;
 pub mod tableau;
 pub mod tmdl;
 pub mod vquery;
