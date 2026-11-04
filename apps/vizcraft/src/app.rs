@@ -24,10 +24,11 @@ pub enum View {
     Sheets,
     Flows,
     Story,
+    Sql,
 }
 
 impl View {
-    pub const ALL: [(View, &'static str, &'static str); 8] = [
+    pub const ALL: [(View, &'static str, &'static str); 9] = [
         (View::Report, "report", "Report view"),
         (View::Table, "table-view", "Table view"),
         (View::Model, "model", "Model view"),
@@ -36,6 +37,7 @@ impl View {
         (View::Sheets, "sheet", "Data sheets (Excel-like editing)"),
         (View::Flows, "flow", "Flows (Fabric / KNIME-style pipelines, notebooks, ML)"),
         (View::Story, "story", "Stories (Tableau-style story points)"),
+        (View::Sql, "sql", "SQL (DuckDB analytics over the model, files and your warehouse; Python)"),
     ];
 }
 
@@ -112,6 +114,7 @@ pub struct VizApp {
     pub sheet_ui: crate::sheet::SheetUi,
     pub flows_ui: crate::flows::FlowsUi,
     pub publish_ui: crate::publish::PublishUi,
+    pub sql_ui: crate::sqlview::SqlUi,
     pub ribbon: crate::ribbon::RibbonUi,
     pub last_refresh_ms: f64,
     pub screenshot: Option<(String, u32)>,
@@ -154,6 +157,7 @@ impl VizApp {
             sheet_ui: Default::default(),
             flows_ui: Default::default(),
             publish_ui: Default::default(),
+            sql_ui: Default::default(),
             ribbon: Default::default(),
             last_refresh_ms: 0.0,
             screenshot: None,
@@ -330,7 +334,10 @@ impl VizApp {
         let t0 = std::time::Instant::now();
         build::sync_model_tables(&mut self.project);
         let host = vizcraft_connectors::DesktopHost::default();
-        self.built = build::build(&self.project, &host, &self.params());
+        let params = self.params();
+        // `VizCraft.Sql(...)` in queries runs on the SQL view's embedded engine.
+        let sql_host = crate::sqlview::SqlHost::new(&host, &mut self.sql_ui, &self.project, &self.built, self.path.as_deref());
+        self.built = build::build(&self.project, &sql_host, &params);
         self.after_build();
         self.last_refresh_ms = t0.elapsed().as_secs_f64() * 1000.0;
     }
@@ -438,7 +445,8 @@ impl VizApp {
         if newp {
             self.new_project();
         }
-        if refresh {
+        // In the SQL view F5 runs the script instead.
+        if refresh && !(self.view == View::Sql && !self.pq_open) {
             self.needs_refresh = true;
         }
     }
@@ -565,6 +573,7 @@ impl eframe::App for VizApp {
                 View::Sheets => crate::sheet::show(self, ui),
                 View::Flows => crate::flows::show(self, ui),
                 View::Story => crate::report::story::show(self, ui),
+                View::Sql => crate::sqlview::show(self, ui),
             }
         }
         crate::pq::dialogs(self, &ctx);
@@ -573,6 +582,7 @@ impl eframe::App for VizApp {
         crate::flows::dialogs(self, &ctx);
         crate::publish::dialogs(self, &ctx);
         crate::report::dialogs(self, &ctx);
+        crate::sqlview::dialogs(self, &ctx);
         self.show_toasts(&ctx, &t);
         self.handle_screenshot(&ctx);
     }

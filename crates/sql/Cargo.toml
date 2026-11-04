@@ -1,0 +1,21 @@
+[package]
+name = "vizcraft-sql"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "VizCraft SQL: an embedded DuckDB analytical engine over the semantic model, external files and a per-project warehouse"
+
+[lints]
+workspace = true
+
+[features]
+default = ["duckdb"]
+duckdb = ["dep:duckdb"]
+
+[dependencies]
+vizcraft-core = { workspace = true }
+vizcraft-query = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+duckdb = { version = "1.20000.1", features = ["bundled"], optional = true }

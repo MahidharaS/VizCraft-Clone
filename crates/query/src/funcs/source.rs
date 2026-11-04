@@ -245,6 +245,9 @@ pub fn call(ev: &Evaluator, name: &str, a: &[Value]) -> Option<Result<Value>> {
             }
             ev.host.database(name, &texts, None).map(Value::table)
         })(),
+        // SQL over the model / warehouse through the host's embedded SQL engine (DuckDB in the
+        // desktop app): `VizCraft.Sql("select region, sum(amount) from Sales group by 1")`.
+        "VizCraft.Sql" | "Sql.Native" => text_arg(a, 0, name).and_then(|q| ev.host.sql(&q)).map(Value::table),
         "Excel.CurrentWorkbook" => ev.host.current_workbook().map(Value::table),
         "File.Contents" => text_arg(a, 0, name).and_then(|p| ev.host.file_contents(&p)).map(|b| Value::Binary(Rc::new(b))),
         "Web.Contents" => (|| {

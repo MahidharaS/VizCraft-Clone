@@ -132,13 +132,18 @@ fn get_data_menu(app: &mut VizApp, ui: &mut Ui) {
         ("mysql", "MySQL / MariaDB database"),
         ("sqlserver", "SQL Server database"),
         ("odbc", "ODBC"),
+        ("duckdb", "VizCraft SQL (DuckDB)"),
         ("enter", "Enter data"),
         ("blank", "Blank query"),
         ("more", "More…"),
     ];
     for (k, label) in items {
         if ui.button(*label).clicked() {
-            crate::pq::get_data(app, k);
+            if *k == "duckdb" {
+                crate::sqlview::get_data_sql(app);
+            } else {
+                crate::pq::get_data(app, k);
+            }
             ui.close();
         }
     }
@@ -236,6 +241,9 @@ fn home_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
         }
         if big_button(ui, t, "refresh", "Refresh", "Refresh all data (F5)").clicked() {
             app.mark_data_dirty();
+        }
+        if big_button(ui, t, "sql", "SQL", "SQL workbench (DuckDB) over the model, files and your warehouse").clicked() {
+            crate::sqlview::open(app);
         }
     });
     group(ui, t, "Insert", |ui| {
@@ -543,6 +551,19 @@ fn data_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
             app.pq_open = false;
         }
     });
+    group(ui, t, "SQL analytics", |ui| {
+        if big_button(ui, t, "sql", "SQL", "SQL workbench: DuckDB over the model tables, files and the project warehouse").clicked() {
+            crate::sqlview::open(app);
+        }
+        column(ui, |ui| {
+            if small_button(ui, t, "transform", "SQL query (Power Query)", "A Power Query query that starts from VizCraft.Sql(...)").clicked() {
+                crate::sqlview::get_data_sql(app);
+            }
+            if small_button(ui, t, "python", "Python over SQL", "Analyze a SQL result with pandas").clicked() {
+                crate::sqlview::open(app);
+            }
+        });
+    });
     group(ui, t, "Fabric", |ui| {
         if big_button(ui, t, "flow", "New flow", "A pipeline of steps: prepare, ML, output tables").clicked() {
             crate::flows::new_flow(app);
@@ -628,6 +649,8 @@ fn run_search(app: &mut VizApp, q: &str) {
         ("bookmark", |a| a.panes.bookmarks = true),
         ("sheet", crate::sheet::new_sheet),
         ("flow", crate::flows::new_flow),
+        ("sql", crate::sqlview::open),
+        ("duckdb", crate::sqlview::open),
     ];
     for (k, f) in actions {
         if k.contains(q) || q.contains(k) {

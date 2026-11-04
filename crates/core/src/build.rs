@@ -303,6 +303,9 @@ impl Host for ProjectHost<'_> {
     fn database(&self, kind: &str, args: &[String], query: Option<&str>) -> vizcraft_query::Result<vizcraft_query::Table> {
         self.inner.database(kind, args, query)
     }
+    fn sql(&self, query: &str) -> vizcraft_query::Result<vizcraft_query::Table> {
+        self.inner.sql(query)
+    }
 }
 
 /// Evaluates one query to a table.

@@ -11,6 +11,7 @@ mod publish;
 mod report;
 mod ribbon;
 mod sheet;
+mod sqlview;
 mod theme;
 mod widgets;
 

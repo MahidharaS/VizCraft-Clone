@@ -121,6 +121,26 @@ pub fn paint(p: &Painter, r: Rect, name: &str, c: Color32) {
             p.line_segment([at(0.12, 0.2), at(0.12, 0.8)], s(c));
             p.line_segment([at(0.88, 0.2), at(0.88, 0.8)], s(c));
         }
+        "sql" => {
+            // A database cylinder with a query prompt in front.
+            let half = |cy: f32, from: f32, to: f32| -> Vec<Pos2> {
+                (0..=12).map(|i| {
+                    let a = from + (to - from) * i as f32 / 12.0;
+                    pos2(x0 + w * (0.36 + 0.3 * a.cos()), y0 + h * (cy + 0.1 * a.sin()))
+                }).collect()
+            };
+            p.add(egui::Shape::ellipse_stroke(at(0.36, 0.18), vec2(w * 0.3, h * 0.1), s(c)));
+            p.line_segment([at(0.06, 0.18), at(0.06, 0.74)], s(c));
+            p.line_segment([at(0.66, 0.18), at(0.66, 0.44)], s(c));
+            p.add(egui::Shape::line(half(0.46, 0.0, std::f32::consts::PI), s(soft)));
+            p.add(egui::Shape::line(half(0.74, std::f32::consts::FRAC_PI_2, std::f32::consts::PI), s(c)));
+            let bx = Rect::from_min_max(at(0.46, 0.52), at(0.98, 0.94));
+            p.rect_filled(bx, 2.0, c.gamma_multiply(0.18));
+            p.rect_stroke(bx, 2.0, s(c), StrokeKind::Inside);
+            p.line_segment([at(0.56, 0.62), at(0.66, 0.72)], s(c));
+            p.line_segment([at(0.66, 0.72), at(0.56, 0.82)], s(c));
+            p.line_segment([at(0.72, 0.84), at(0.88, 0.84)], s(c));
+        }
         "transform" => {
             p.rect_stroke(Rect::from_min_max(at(0.08, 0.15), at(0.62, 0.85)), 2.0, s(c), StrokeKind::Inside);
             p.line_segment([at(0.08, 0.38), at(0.62, 0.38)], s(c));
