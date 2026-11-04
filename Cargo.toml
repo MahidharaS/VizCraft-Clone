@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "crates/wasm", "apps/vizcraft", "apps/vizcraft-server"]
-default-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "apps/vizcraft", "apps/vizcraft-server"]
+members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "crates/ai", "crates/wasm", "apps/vizcraft", "apps/vizcraft-server"]
+default-members = ["crates/datamodel", "crates/query", "crates/core", "crates/connectors", "crates/publish", "crates/sql", "crates/ai", "apps/vizcraft", "apps/vizcraft-server"]
 
 [workspace.package]
 version = "0.1.0"
@@ -17,6 +17,7 @@ vizcraft-core = { path = "crates/core" }
 vizcraft-connectors = { path = "crates/connectors" }
 vizcraft-publish = { path = "crates/publish" }
 vizcraft-sql = { path = "crates/sql" }
+vizcraft-ai = { path = "crates/ai" }
 thiserror = "2"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }

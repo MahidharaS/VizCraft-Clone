@@ -20,6 +20,7 @@ enum Level {
 pub fn add_filter(app: &mut VizApp, level: &str, f: FieldRef) {
     let id = app.project.next_id();
     let kind = default_kind(app, &f);
+    crate::ai::track_filter(app, &f, level);
     let fd = FilterDef { id, field: FieldUse::new(f), kind, locked: false, hidden: false, require_single: false, context: false };
     app.checkpoint("Add filter");
     match level {

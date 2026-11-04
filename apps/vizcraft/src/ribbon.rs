@@ -283,6 +283,25 @@ fn home_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
             crate::publish::open(app, "service");
         }
     });
+    group(ui, t, "AI", |ui| {
+        if big_button(ui, t, "ai", "Copilot", "Ask about your data; build visuals, measures and filters with AI").clicked() {
+            app.ai.copilot_open = !app.ai.copilot_open;
+            if app.ai.copilot_open && !matches!(app.view, View::Report | View::Table | View::Model | View::Dax) {
+                app.view = View::Report;
+            }
+            app.pq_open = false;
+        }
+        column(ui, |ui| {
+            if small_button(ui, t, "formulator", "Formulator", "Data Formulator-style data threads: concept encodings, derived fields, branching").clicked() {
+                app.view = View::Formulator;
+                app.pq_open = false;
+            }
+            if small_button(ui, t, "ai", "AI hub", "Models and keys, local models, OpenJEV, your personal brain, privacy").clicked() {
+                app.view = View::Ai;
+                app.pq_open = false;
+            }
+        });
+    });
 }
 
 fn insert_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
@@ -469,6 +488,7 @@ fn view_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
                     if let Some(th) = vizcraft_core::color::Theme::by_name(name) {
                         app.checkpoint("Theme");
                         app.project.report.theme = th;
+                        crate::ai::track_theme(app, name);
                     }
                     ui.close();
                 }

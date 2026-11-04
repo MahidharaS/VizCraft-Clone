@@ -272,4 +272,16 @@ partially working code that was **never merged or build-checked together**.
   drew under the SQL editor's line-number gutter (also DAX editor, sheet cell editor, Enter-data grid).
   Margins now live in the frame's `inner_margin`.
 - Headless runs need `apt-get install libxkbcommon-x11-0`.
-- Next: `wip/ai-formulator.patch`, then `wip/studio-mlops.patch` (§6 step 4).
+- **G — AI hub / Copilot / Formulator: merged.** Applied `wip/ai-formulator.patch` (conflicts in
+  `Cargo.toml`, `apps/vizcraft/Cargo.toml`, `app.rs` were additive: View enum now has Sql, Formulator,
+  Ai). Fixed 8 compile errors (name clash `channel`, egui 0.37 `frame(bool)`→`Frame`, two borrow
+  errors). `cargo test -p vizcraft-ai`: 29 passed. Formulator fixes found by looking at it:
+  - "Region" holding East/North/South/West was classed as geographic → auto Map with "No locations
+    found". Geo-by-name now needs most values to resolve in the gazetteer (lat/lon always count).
+  - Offline rules picked Store[Region] for x and Targets[Region] for colour → every bar split in 4.
+    Same column name from another table is no longer used as colour; colour equal to the axis field
+    is ignored in the spec (regression test added).
+  - Thread cards pushed the resizable panel wider and the main area overflowed; fixed width cards.
+  - Derived-data grid showed the same field twice.
+- Not exercised: real LLM calls (no keys in the session), OpenJEV server, Copilot apply flow.
+- Next: `wip/studio-mlops.patch` (§6 step 4), then §5 leftovers and §3 known issues.

@@ -360,6 +360,7 @@ pub fn insert_visual(app: &mut VizApp, kind: VisualKind) {
     place(app, el);
     app.panes.visualizations = true;
     app.report.viz_tab = 0;
+    crate::ai::track_insert(app, kind);
 }
 
 pub fn insert_text(app: &mut VizApp) {

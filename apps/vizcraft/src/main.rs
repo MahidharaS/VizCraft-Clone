@@ -1,6 +1,7 @@
 //! VizCraft desktop app.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ai;
 mod app;
 mod flows;
 mod icons;

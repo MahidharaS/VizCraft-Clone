@@ -1,0 +1,19 @@
+[package]
+name = "vizcraft-ai"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "VizCraft AI: LLM providers (cloud and local), the OpenJEV decision client, the copilot agent loop and the personal on-device learning brain"
+
+[lints]
+workspace = true
+
+[dependencies]
+vizcraft-core = { workspace = true }
+vizcraft-datamodel = { workspace = true }
+vizcraft-query = { workspace = true }
+vizcraft-connectors = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+ureq = { version = "3", default-features = false, features = ["rustls", "json"] }

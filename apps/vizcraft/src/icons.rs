@@ -96,6 +96,30 @@ pub fn paint(p: &Painter, r: Rect, name: &str, c: Color32) {
             p.line_segment([at(0.5, 0.12), at(0.5, 0.88)], s(c));
             p.circle_stroke(at(0.5, 0.5), w * 0.18, s(c));
         }
+        "ai" => {
+            // A four-point sparkle with a small companion.
+            let star = |cx: f32, cy: f32, rr: f32, col: Color32| {
+                let k = 0.28;
+                let pts = vec![at(cx, cy - rr), at(cx + rr * k, cy - rr * k), at(cx + rr, cy), at(cx + rr * k, cy + rr * k), at(cx, cy + rr), at(cx - rr * k, cy + rr * k), at(cx - rr, cy), at(cx - rr * k, cy - rr * k)];
+                crate::paint::fill_polygon(p, &pts, col);
+            };
+            star(0.42, 0.55, 0.4, c);
+            star(0.8, 0.2, 0.17, soft);
+        }
+        "formulator" => {
+            // A data thread: three nodes, a branch, a mini chart at the end.
+            p.circle_filled(at(0.15, 0.2), w * 0.08, c);
+            p.circle_filled(at(0.15, 0.55), w * 0.08, c);
+            p.circle_filled(at(0.45, 0.82), w * 0.08, soft);
+            p.line_segment([at(0.15, 0.2), at(0.15, 0.55)], s(c));
+            p.line_segment([at(0.15, 0.55), at(0.45, 0.82)], s(soft));
+            p.line_segment([at(0.15, 0.2), at(0.45, 0.2)], s(c));
+            bar(0.52, 0.28, 0.62, 0.42, c);
+            bar(0.68, 0.16, 0.78, 0.42, c);
+            bar(0.84, 0.05, 0.94, 0.42, c);
+            p.line_segment([at(0.15, 0.55), at(0.5, 0.55)], s(c));
+            bar(0.56, 0.6, 0.94, 0.66, soft);
+        }
         "story" => {
             for (i, fx) in [0.1, 0.4, 0.7].iter().enumerate() {
                 let col = if i == 1 { c } else { soft };

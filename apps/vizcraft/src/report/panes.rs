@@ -66,10 +66,14 @@ fn gallery(app: &mut VizApp, ui: &mut Ui, t: &Tokens, current: Option<VisualKind
                     match selected_visual(app) {
                         Some((id, _)) => {
                             app.checkpoint("Change visual type");
+                            let from = app.project.element(id).and_then(|(_, e)| e.visual().map(|v| v.kind));
                             if let Some(v) = app.project.element_mut(id).and_then(|e| e.visual_mut()) {
                                 // Move fields between wells of the new kind where roles differ.
                                 remap_wells(v, *k);
                                 v.kind = *k;
+                            }
+                            if let Some(from) = from {
+                                crate::ai::track_kind_changed(app, id, from, *k);
                             }
                             app.report.render_cache.clear();
                         }
@@ -82,7 +86,7 @@ fn gallery(app: &mut VizApp, ui: &mut Ui, t: &Tokens, current: Option<VisualKind
 }
 
 /// When changing visual type, keep fields in wells with the same role; move the rest sensibly.
-fn remap_wells(v: &mut VisualSpec, k: VisualKind) {
+pub fn remap_wells(v: &mut VisualSpec, k: VisualKind) {
     let roles: Vec<&str> = k.wells().iter().map(|(r, _)| *r).collect();
     let old = std::mem::take(&mut v.wells);
     let mut cats = Vec::new();
@@ -118,6 +122,7 @@ fn build_tab(app: &mut VizApp, ui: &mut Ui, t: &Tokens) {
     for (role, label) in v.kind.wells() {
         well(app, ui, t, id, &v, role, label);
     }
+    crate::ai::build_tab_chips(app, ui, t, id);
     if v.kind == VisualKind::Slicer {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
@@ -336,6 +341,7 @@ pub fn add_field(app: &mut VizApp, id: u64, role: &str, f: FieldRef) {
         }
     }
     app.report.render_cache.clear();
+    crate::ai::track_field_added(app, id, role, &f);
 }
 
 /// Clicking a field in the Data pane: adds it to the selected visual's best well (or creates a
@@ -581,6 +587,7 @@ pub fn prop_row(app: &mut VizApp, ui: &mut Ui, t: &Tokens, id: u64, pd: &format:
         }
         if let Some(v) = newv {
             app.checkpoint("Format");
+            crate::ai::track_format(app, id, pd.key, &v);
             if let Some(e) = app.project.element_mut(id) {
                 e.props.insert(pd.key.to_string(), v);
             }
