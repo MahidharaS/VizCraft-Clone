@@ -62,9 +62,10 @@ if ((Get-Command candle.exe -ErrorAction SilentlyContinue) -and (Get-Command lig
       <Directory Id="LocalAppDataFolder">
         <Directory Id="Programs" Name="Programs">
           <Directory Id="INSTALLDIR" Name="VizCraft">
-            <Component Id="App" Guid="*">
+            <Component Id="App" Guid="2F6B1C3E-7A4D-4E8B-9C21-5D0A3F7B6E91">
               <File Id="VizCraftExe" Source="$Stage\vizcraft.exe" KeyPath="no" />
               <File Id="ServerExe" Source="$Stage\vizcraft-server.exe" />
+              <File Id="MlServeExe" Source="$Stage\vizcraft-mlserve.exe" />
               <RegistryValue Root="HKCU" Key="Software\VizCraft" Name="installed" Type="integer" Value="1" KeyPath="yes" />
               <RemoveFolder Id="RemoveInstallDir" On="uninstall" />
             </Component>
@@ -72,7 +73,7 @@ if ((Get-Command candle.exe -ErrorAction SilentlyContinue) -and (Get-Command lig
         </Directory>
       </Directory>
       <Directory Id="ProgramMenuFolder">
-        <Component Id="Shortcut" Guid="*">
+        <Component Id="Shortcut" Guid="8D4E2A61-3B9C-4F75-A0D8-1C6E9B2F4A37">
           <Shortcut Id="StartMenu" Name="VizCraft" Target="[INSTALLDIR]vizcraft.exe" WorkingDirectory="INSTALLDIR" />
           <RegistryValue Root="HKCU" Key="Software\VizCraft" Name="shortcut" Type="integer" Value="1" KeyPath="yes" />
         </Component>
@@ -86,7 +87,9 @@ if ((Get-Command candle.exe -ErrorAction SilentlyContinue) -and (Get-Command lig
 </Wix>
 "@ | Set-Content -Encoding UTF8 $Wxs
     candle.exe -nologo -out (Join-Path $Work 'vizcraft.wixobj') $Wxs
+    if ($LASTEXITCODE -ne 0) { throw 'candle failed' }
     light.exe -nologo -sice:ICE38 -sice:ICE64 -sice:ICE91 -out (Join-Path $Dist "$Name.msi") (Join-Path $Work 'vizcraft.wixobj')
+    if ($LASTEXITCODE -ne 0) { throw 'light failed' }
     Write-Host "==> $(Join-Path $Dist "$Name.msi")"
 } else {
     Write-Host '(WiX not found: skipping the MSI)'
